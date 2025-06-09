@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "Notes")
 data class NoteEntity(
     @PrimaryKey @ColumnInfo(name = "note_id") val noteId: String,
-    @ColumnInfo(name = "title") val title: String,
-    @ColumnInfo(name = "body") val body: String,
-    @ColumnInfo(name = "sub_category_id") val subCategoryId: String
+    @ColumnInfo(name = "title") val title: String?, // Changed from String
+    @ColumnInfo(name = "body") val body: String?, // Changed from String
+    @ColumnInfo(name = "sub_category_id") val subCategoryId: String? // Changed from String
 )
