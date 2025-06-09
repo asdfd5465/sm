@@ -37,23 +37,34 @@ fun HomeScreen(onCategoryClick: (categoryId: String) -> Unit) {
     ) { padding ->
         LazyColumn(modifier = Modifier.padding(padding).padding(horizontal = 8.dp)) {
             items(categories) { category ->
-                CategoryItem(category = category, onClick = { onCategoryClick(category.categoryId) })
+                // Check for null ID before making it clickable
+                val isClickable = category.categoryId != null
+                CategoryItem(
+                    category = category,
+                    onClick = {
+                        if (isClickable) {
+                            onCategoryClick(category.categoryId)
+                        }
+                    },
+                    isClickable = isClickable
+                )
             }
         }
     }
 }
 
 @Composable
-fun CategoryItem(category: CategoryEntity, onClick: () -> Unit) {
+fun CategoryItem(category: CategoryEntity, onClick: () -> Unit, isClickable: Boolean) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp, horizontal = 8.dp)
-            .clickable(onClick = onClick),
+            .then(if (isClickable) Modifier.clickable(onClick = onClick) else Modifier),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Text(
-            text = category.categoryName,
+            // Handle nullable categoryName
+            text = category.categoryName ?: "Unnamed Category",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(16.dp)
         )
