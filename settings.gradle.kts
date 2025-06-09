@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "WordSearchApp"
+rootProject.name = "BankWiser Pro"
 include(":app")
