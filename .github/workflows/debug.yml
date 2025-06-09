@@ -1,0 +1,110 @@
+name: Android CI Build
+
+on:
+  workflow_dispatch: 
+  #push:
+    #branches: [ main ] # Or your default branch
+  #pull_request:
+    #branches: [ main ] # Or your default branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Android SDK
+        run: |
+          # Define Android SDK root and add to GITHUB_ENV for subsequent steps
+          echo "ANDROID_SDK_ROOT=${HOME}/android-sdk" >> $GITHUB_ENV
+          echo "ANDROID_HOME=${HOME}/android-sdk" >> $GITHUB_ENV # Legacy
+
+          # Define SDK paths for the current script session
+          SDK_CMD_TOOLS_PATH="${HOME}/android-sdk/cmdline-tools/latest/bin"
+          SDK_PLATFORM_TOOLS_PATH="${HOME}/android-sdk/platform-tools"
+          SDK_EMULATOR_PATH="${HOME}/android-sdk/emulator" # Included for completeness
+
+          # Add to GITHUB_PATH for subsequent *steps*
+          echo "$SDK_CMD_TOOLS_PATH" >> $GITHUB_PATH
+          echo "$SDK_PLATFORM_TOOLS_PATH" >> $GITHUB_PATH
+          echo "$SDK_EMULATOR_PATH" >> $GITHUB_PATH
+
+          # Export to PATH for the *current script session*
+          export PATH="$SDK_CMD_TOOLS_PATH:$SDK_PLATFORM_TOOLS_PATH:$SDK_EMULATOR_PATH:$PATH"
+
+          # Create SDK directories
+          mkdir -p ${HOME}/android-sdk/cmdline-tools
+          
+          # Download and extract command-line tools
+          # Using a known stable version (11.0) which provides sdkmanager 12.0
+          # If you need a newer sdkmanager, find the appropriate zip on:
+          # https://developer.android.com/studio#command-line-tools-only
+          CMDTOOLS_VERSION_ZIP="commandlinetools-linux-11076708_latest.zip"
+          echo "Downloading Android Command-line Tools: ${CMDTOOLS_VERSION_ZIP}"
+          wget --quiet "https://dl.google.com/android/repository/${CMDTOOLS_VERSION_ZIP}" -O cmdline-tools.zip
+          echo "Unzipping Command-line Tools..."
+          unzip -q cmdline-tools.zip -d ${HOME}/android-sdk/cmdline-tools
+          # The unzipped folder is 'cmdline-tools', move its contents to 'latest'
+          mv ${HOME}/android-sdk/cmdline-tools/cmdline-tools ${HOME}/android-sdk/cmdline-tools/latest
+          rm cmdline-tools.zip
+          echo "Command-line Tools installed to ${HOME}/android-sdk/cmdline-tools/latest"
+
+          # Verify sdkmanager is found and its version (for debugging)
+          echo "Verifying sdkmanager..."
+          which sdkmanager
+          sdkmanager --version || echo "sdkmanager --version failed"
+
+          # Accept licenses and install required packages
+          echo "Accepting SDK licenses..."
+          yes | sdkmanager --licenses || echo "Failed to accept licenses"
+          
+          echo "Installing SDK packages..."
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools" || echo "Failed to install SDK packages"
+          
+          echo "SDK Setup Complete. Installed packages:"
+          sdkmanager --list_installed || echo "sdkmanager --list_installed failed"
+        env:
+          # This env is primarily for this step if ANDROID_SDK_ROOT isn't set in GITHUB_ENV yet.
+          # However, since we echo to GITHUB_ENV at the start of this script,
+          # it's mainly here for clarity or if used by tools within this specific run block
+          # that might not pick up GITHUB_ENV immediately.
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT || format('{0}/android-sdk', env.HOME) }}
+
+      - name: Setup Gradle Caching
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+
+      - name: Build with Gradle
+        run: |
+          ./gradlew clean
+          ./gradlew assembleDebug
+        env:
+          # Ensure ANDROID_SDK_ROOT and ANDROID_HOME are available to Gradle
+          # These will be picked up from GITHUB_ENV which was set in the "Set up Android SDK" step
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error # Fail the workflow if APK is not found
