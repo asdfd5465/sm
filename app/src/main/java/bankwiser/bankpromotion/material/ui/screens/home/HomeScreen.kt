@@ -1,5 +1,6 @@
 package bankwiser.bankpromotion.material.ui.screens.home
 
+import android.app.Application
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,9 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.data.local.entity.CategoryEntity
-import bankwiser.bankpromotion.material.data.repository.ContentRepository
 import bankwiser.bankpromotion.material.ui.theme.BankWiserProTheme
 import bankwiser.bankpromotion.material.ui.viewmodel.HomeViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
@@ -23,9 +22,9 @@ import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(onCategoryClick: (categoryId: String) -> Unit) {
-    val context = LocalContext.current
-    val repository = ContentRepository((context.applicationContext as BankWiserApplication).contentDatabase)
-    val viewModel: HomeViewModel = viewModel(factory = ViewModelFactory(repository))
+    val application = LocalContext.current.applicationContext as Application
+    // Pass the application to the factory. Do not create the repository here.
+    val viewModel: HomeViewModel = viewModel(factory = ViewModelFactory(application))
     val categories by viewModel.categories.collectAsState()
 
     Scaffold(
