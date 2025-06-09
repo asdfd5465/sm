@@ -1,5 +1,6 @@
 package bankwiser.bankpromotion.material.ui.screens.notes
 
+import android.app.Application
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,9 +17,7 @@ import androidx.compose.ui.platform.LocalSavedStateRegistryOwner
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.data.local.entity.NoteEntity
-import bankwiser.bankpromotion.material.data.repository.ContentRepository
 import bankwiser.bankpromotion.material.ui.viewmodel.NoteListViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.SavedStateViewModelFactory
 
@@ -28,12 +27,11 @@ fun NoteListScreen(
     onNoteClick: (noteId: String) -> Unit,
     onNavigateUp: () -> Unit
 ) {
-    val context = LocalContext.current
-    val repository = ContentRepository((context.applicationContext as BankWiserApplication).contentDatabase)
+    val application = LocalContext.current.applicationContext as Application
     val viewModel: NoteListViewModel = viewModel(
         factory = SavedStateViewModelFactory(
             owner = LocalSavedStateRegistryOwner.current,
-            repository = repository
+            application = application
         )
     )
     val notes by viewModel.notes.collectAsState()
