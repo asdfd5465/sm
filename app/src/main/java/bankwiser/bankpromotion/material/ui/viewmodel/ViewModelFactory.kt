@@ -10,18 +10,6 @@ class ViewModelFactory(private val repository: ContentRepository) : ViewModelPro
             @Suppress("UNCHECKED_CAST")
             return HomeViewModel(repository) as T
         }
-        if (modelClass.isAssignableFrom(SubCategoryViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return SubCategoryViewModel(repository) as T
-        }
-         if (modelClass.isAssignableFrom(NoteListViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return NoteListViewModel(repository) as T
-        }
-         if (modelClass.isAssignableFrom(NoteDetailViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return NoteDetailViewModel(repository) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
+        throw IllegalArgumentException("Unknown ViewModel class. Use SavedStateViewModelFactory for ViewModels with arguments.")
     }
 }
