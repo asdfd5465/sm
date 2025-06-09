@@ -1,19 +1,17 @@
 package bankwiser.bankpromotion.material.ui.viewmodel
 
+import android.app.Application
 import android.os.Bundle
 import androidx.lifecycle.AbstractSavedStateViewModelFactory
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.savedstate.SavedStateRegistryOwner
+import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.data.repository.ContentRepository
 
-/**
- * A factory that can create ViewModels that require a ContentRepository and a SavedStateHandle.
- * This is the standard way to pass arguments from navigation into a ViewModel.
- */
 class SavedStateViewModelFactory(
     owner: SavedStateRegistryOwner,
-    private val repository: ContentRepository,
+    private val application: Application,
     defaultArgs: Bundle? = null
 ) : AbstractSavedStateViewModelFactory(owner, defaultArgs) {
     override fun <T : ViewModel> create(
@@ -21,6 +19,9 @@ class SavedStateViewModelFactory(
         modelClass: Class<T>,
         handle: SavedStateHandle
     ): T {
+        // The factory now creates the repository itself, ensuring a single source.
+        val repository = ContentRepository((application as BankWiserApplication).contentDatabase)
+
         if (modelClass.isAssignableFrom(SubCategoryViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
             return SubCategoryViewModel(repository, handle) as T
