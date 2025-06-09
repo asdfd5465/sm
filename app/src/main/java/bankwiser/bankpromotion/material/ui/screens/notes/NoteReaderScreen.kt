@@ -58,9 +58,15 @@ fun NoteReaderScreen(
                         .padding(16.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    Text(text = it.title, style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        text = it.title ?: "No Title",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
                     Divider(modifier = Modifier.padding(vertical = 16.dp))
-                    Text(text = it.body, style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        text = it.body ?: "No content available.",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                 }
             } ?: run {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
