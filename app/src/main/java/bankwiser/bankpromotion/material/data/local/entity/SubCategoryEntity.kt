@@ -14,10 +14,10 @@ import androidx.room.PrimaryKey
         childColumns = ["category_id"],
         onDelete = ForeignKey.CASCADE
     )],
-    indices = [Index(value = ["category_id"])] // This line fixes the warning
+    indices = [Index(value = ["category_id"])]
 )
 data class SubCategoryEntity(
     @PrimaryKey @ColumnInfo(name = "sub_category_id") val subCategoryId: String,
-    @ColumnInfo(name = "category_id") val categoryId: String,
-    @ColumnInfo(name = "sub_category_name") val subCategoryName: String
+    @ColumnInfo(name = "category_id") val categoryId: String?, // Changed from String
+    @ColumnInfo(name = "sub_category_name") val subCategoryName: String? // Changed from String
 )
