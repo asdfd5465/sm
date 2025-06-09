@@ -6,15 +6,12 @@ import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.sqlite.db.SupportSQLiteDatabase
 import bankwiser.bankpromotion.material.data.local.dao.CategoryDao
 import bankwiser.bankpromotion.material.data.local.dao.NoteDao
 import bankwiser.bankpromotion.material.data.local.dao.SubCategoryDao
 import bankwiser.bankpromotion.material.data.local.entity.CategoryEntity
 import bankwiser.bankpromotion.material.data.local.entity.NoteEntity
 import bankwiser.bankpromotion.material.data.local.entity.SubCategoryEntity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 
@@ -37,39 +34,22 @@ abstract class ContentDatabase : RoomDatabase() {
         private const val ASSET_DB_FILENAME = "content_v1.db"
         private const val TAG = "ContentDatabase"
 
-        fun getDatabase(context: Context, scope: CoroutineScope): ContentDatabase {
+        fun getDatabase(context: Context): ContentDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     ContentDatabase::class.java,
                     DATABASE_NAME
                 )
-                .addCallback(DatabaseCallback(context, scope))
+                // The complex callback is GONE. We handle this elsewhere.
                 .build()
                 INSTANCE = instance
                 instance
             }
         }
-    }
 
-    private class DatabaseCallback(
-        private val context: Context,
-        private val scope: CoroutineScope
-    ) : Callback() {
-
-        override fun onCreate(db: SupportSQLiteDatabase) {
-            super.onCreate(db)
-            Log.d(TAG, "Database onCreate called. Launching prepopulation.")
-            // Use the passed application scope to launch the population task.
-            // This happens after the database instance is created and avoids deadlocks.
-            scope.launch {
-                INSTANCE?.let { database ->
-                    prePopulate(context, database)
-                }
-            }
-        }
-
-        private suspend fun prePopulate(context: Context, database: ContentDatabase) {
+        // This is a new public function to handle the data import.
+        suspend fun prePopulateFromAsset(context: Context, database: ContentDatabase) {
             Log.d(TAG, "Starting data import from asset DB.")
             val assetDbFile = extractAssetDb(context) ?: run {
                 Log.e(TAG, "Failed to extract asset DB.")
