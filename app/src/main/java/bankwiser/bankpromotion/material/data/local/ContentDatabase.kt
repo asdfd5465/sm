@@ -5,12 +5,22 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import bankwiser.bankpromotion.material.data.local.dao.CategoryDao
+import bankwiser.bankpromotion.material.data.local.dao.NoteDao
+import bankwiser.bankpromotion.material.data.local.dao.SubCategoryDao
 import bankwiser.bankpromotion.material.data.local.entity.CategoryEntity
+import bankwiser.bankpromotion.material.data.local.entity.NoteEntity
+import bankwiser.bankpromotion.material.data.local.entity.SubCategoryEntity
 
-@Database(entities = [CategoryEntity::class], version = 1, exportSchema = false)
+@Database(
+    entities = [CategoryEntity::class, SubCategoryEntity::class, NoteEntity::class],
+    version = 1,
+    exportSchema = false
+)
 abstract class ContentDatabase : RoomDatabase() {
 
     abstract fun categoryDao(): CategoryDao
+    abstract fun subCategoryDao(): SubCategoryDao
+    abstract fun noteDao(): NoteDao
 
     companion object {
         @Volatile
