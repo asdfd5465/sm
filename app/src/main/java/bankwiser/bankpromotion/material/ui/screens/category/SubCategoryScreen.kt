@@ -28,6 +28,7 @@ fun SubCategoryScreen(
 ) {
     val context = LocalContext.current
     val repository = (context.applicationContext as BankWiserApplication).contentRepository
+    // This call now correctly passes the repository to the factory
     val viewModel: SubCategoryViewModel = viewModel(
         factory = SavedStateViewModelFactory(
             owner = LocalSavedStateRegistryOwner.current,
