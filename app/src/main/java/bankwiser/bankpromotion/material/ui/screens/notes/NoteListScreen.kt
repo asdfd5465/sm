@@ -52,28 +52,19 @@ fun NoteListScreen(
     ) { padding ->
         LazyColumn(modifier = Modifier.padding(padding).padding(horizontal = 8.dp)) {
             items(notes) { note ->
-                val isClickable = note.noteId != null
-                NoteItem(
-                    note = note,
-                    onClick = {
-                        if (isClickable) {
-                            onNoteClick(note.noteId)
-                        }
-                    },
-                    isClickable = isClickable
-                )
+                NoteItem(note = note, onClick = { onNoteClick(note.noteId) })
             }
         }
     }
 }
 
 @Composable
-fun NoteItem(note: NoteEntity, onClick: () -> Unit, isClickable: Boolean) {
+fun NoteItem(note: NoteEntity, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp, horizontal = 8.dp)
-            .then(if (isClickable) Modifier.clickable(onClick = onClick) else Modifier),
+            .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
