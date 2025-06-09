@@ -12,13 +12,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSavedStateRegistryOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.data.local.entity.SubCategoryEntity
 import bankwiser.bankpromotion.material.data.repository.ContentRepository
+import bankwiser.bankpromotion.material.ui.viewmodel.SavedStateViewModelFactory
 import bankwiser.bankpromotion.material.ui.viewmodel.SubCategoryViewModel
-import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,7 +29,12 @@ fun SubCategoryScreen(
 ) {
     val context = LocalContext.current
     val repository = ContentRepository((context.applicationContext as BankWiserApplication).contentDatabase)
-    val viewModel: SubCategoryViewModel = viewModel(factory = ViewModelFactory(repository))
+    val viewModel: SubCategoryViewModel = viewModel(
+        factory = SavedStateViewModelFactory(
+            owner = LocalSavedStateRegistryOwner.current,
+            repository = repository
+        )
+    )
     val subCategories by viewModel.subCategories.collectAsState()
 
     Scaffold(
