@@ -24,6 +24,7 @@ import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
 fun HomeScreen(onCategoryClick: (categoryId: String) -> Unit) {
     val context = LocalContext.current
     val repository = (context.applicationContext as BankWiserApplication).contentRepository
+    // This call now matches the corrected ViewModelFactory constructor
     val viewModel: HomeViewModel = viewModel(factory = ViewModelFactory(repository))
     val categories by viewModel.categories.collectAsState()
 
