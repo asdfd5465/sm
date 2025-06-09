@@ -14,4 +14,8 @@ interface CategoryDao {
 
     @Query("SELECT * FROM Categories ORDER BY category_name ASC")
     fun getAllCategories(): Flow<List<CategoryEntity>>
+
+    // Add this new method to check if the table is empty
+    @Query("SELECT COUNT(*) FROM Categories")
+    suspend fun count(): Int
 }
