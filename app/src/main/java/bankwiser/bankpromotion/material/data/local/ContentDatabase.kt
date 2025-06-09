@@ -2,6 +2,7 @@ package bankwiser.bankpromotion.material.data.local
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -13,7 +14,6 @@ import bankwiser.bankpromotion.material.data.local.entity.CategoryEntity
 import bankwiser.bankpromotion.material.data.local.entity.NoteEntity
 import bankwiser.bankpromotion.material.data.local.entity.SubCategoryEntity
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
@@ -35,15 +35,16 @@ abstract class ContentDatabase : RoomDatabase() {
         private const val DATABASE_NAME = "content.db"
         private const val ASSET_DB_PATH = "database/content_v1.db"
         private const val ASSET_DB_FILENAME = "content_v1.db"
+        private const val TAG = "ContentDatabase"
 
-        fun getDatabase(context: Context): ContentDatabase {
+        fun getDatabase(context: Context, scope: CoroutineScope): ContentDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     ContentDatabase::class.java,
                     DATABASE_NAME
                 )
-                .addCallback(DatabaseCallback(context)) // Use the corrected callback
+                .addCallback(DatabaseCallback(context, scope))
                 .build()
                 INSTANCE = instance
                 instance
@@ -51,20 +52,29 @@ abstract class ContentDatabase : RoomDatabase() {
         }
     }
 
-    private class DatabaseCallback(private val context: Context) : Callback() {
+    private class DatabaseCallback(
+        private val context: Context,
+        private val scope: CoroutineScope
+    ) : Callback() {
+
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
-            // Get the singleton instance AFTER it has been created and assigned.
-            val instance = INSTANCE
-            if (instance != null) {
-                CoroutineScope(Dispatchers.IO).launch {
-                    prePopulate(context, instance)
+            Log.d(TAG, "Database onCreate called. Launching prepopulation.")
+            // Use the passed application scope to launch the population task.
+            // This happens after the database instance is created and avoids deadlocks.
+            scope.launch {
+                INSTANCE?.let { database ->
+                    prePopulate(context, database)
                 }
             }
         }
 
         private suspend fun prePopulate(context: Context, database: ContentDatabase) {
-            val assetDbFile = extractAssetDb(context) ?: return
+            Log.d(TAG, "Starting data import from asset DB.")
+            val assetDbFile = extractAssetDb(context) ?: run {
+                Log.e(TAG, "Failed to extract asset DB.")
+                return
+            }
             val assetDb = SQLiteDatabase.openDatabase(assetDbFile.path, null, SQLiteDatabase.OPEN_READONLY)
 
             // Populate Categories
@@ -77,13 +87,14 @@ abstract class ContentDatabase : RoomDatabase() {
                     if (idIndex != -1) {
                         val id = cursor.getString(idIndex)
                         if (id != null) {
-                            val name = if (nameIndex != -1) cursor.getString(nameIndex) else null
+                            val name = if (nameIndex != -1 && !cursor.isNull(nameIndex)) cursor.getString(nameIndex) else null
                             categories.add(CategoryEntity(categoryId = id, categoryName = name))
                         }
                     }
                 }
             }
             database.categoryDao().insertAll(categories)
+            Log.d(TAG, "Imported ${categories.size} categories.")
 
             // Populate SubCategories
             val subCategoryCursor = assetDb.rawQuery("SELECT * FROM SubCategories", null)
@@ -97,13 +108,14 @@ abstract class ContentDatabase : RoomDatabase() {
                         val id = cursor.getString(idIndex)
                         val catId = cursor.getString(catIdIndex)
                         if (id != null && catId != null) {
-                            val name = if (nameIndex != -1) cursor.getString(nameIndex) else null
+                            val name = if (nameIndex != -1 && !cursor.isNull(nameIndex)) cursor.getString(nameIndex) else null
                             subCategories.add(SubCategoryEntity(subCategoryId = id, categoryId = catId, subCategoryName = name))
                         }
                     }
                 }
             }
             database.subCategoryDao().insertAll(subCategories)
+            Log.d(TAG, "Imported ${subCategories.size} sub-categories.")
 
             // Populate Notes
             val noteCursor = assetDb.rawQuery("SELECT * FROM Notes", null)
@@ -117,18 +129,20 @@ abstract class ContentDatabase : RoomDatabase() {
                     if (idIndex != -1) {
                         val id = cursor.getString(idIndex)
                         if(id != null) {
-                            val subCatId = if (subCatIdIndex != -1) cursor.getString(subCatIdIndex) else null
-                            val title = if (titleIndex != -1) cursor.getString(titleIndex) else null
-                            val body = if (bodyIndex != -1) cursor.getString(bodyIndex) else null
+                            val subCatId = if (subCatIdIndex != -1 && !cursor.isNull(subCatIdIndex)) cursor.getString(subCatIdIndex) else null
+                            val title = if (titleIndex != -1 && !cursor.isNull(titleIndex)) cursor.getString(titleIndex) else null
+                            val body = if (bodyIndex != -1 && !cursor.isNull(bodyIndex)) cursor.getString(bodyIndex) else null
                             notes.add(NoteEntity(noteId = id, subCategoryId = subCatId, title = title, body = body))
                         }
                     }
                 }
             }
             database.noteDao().insertAll(notes)
+            Log.d(TAG, "Imported ${notes.size} notes.")
 
             assetDb.close()
             assetDbFile.delete()
+            Log.d(TAG, "Data import finished. Temp asset DB deleted.")
         }
 
         private fun extractAssetDb(context: Context): File? {
@@ -141,7 +155,7 @@ abstract class ContentDatabase : RoomDatabase() {
                 }
                 return dbFile
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "Error extracting asset DB", e)
                 return null
             }
         }
