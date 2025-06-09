@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BankWiser Pro - Final UI Mockup</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            background: linear-gradient(135deg, #5A67D8 0%, #7F5AF0 100%);
+            min-height: 100vh; 
+            padding: 20px; 
+            color: #1A202C; 
+        }
+        .container { max-width: 2400px; margin: 0 auto; } /* Wider for more screens */
+        .main-title { color: white; text-align: center; margin-bottom: 30px; font-size: 2.2rem; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .screen-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 30px; margin-bottom: 40px; } /* Slightly wider min */
+        .screen { background: #FFFFFF; border-radius: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); overflow: hidden; transition: transform 0.3s ease; display: flex; flex-direction: column; }
+        .screen:hover { transform: translateY(-6px); }
+        .phone-frame { background: #2D3748; padding: 18px; border-radius: 24px; flex-grow: 1; display: flex; flex-direction: column; }
+        .screen-content { background: #F7FAFC; border-radius: 18px; height: 620px; overflow-y: auto; position: relative; flex-grow: 1; display: flex; flex-direction: column; }
+        .status-bar { background: #1A202C; color: white; padding: 8px 15px; font-size: 12px; display: flex; justify-content: space-between; border-radius: 18px 18px 0 0; flex-shrink: 0; }
+        .header { 
+            background: linear-gradient(135deg, #4C51BF, #6B46C1); 
+            color: white; padding: 20px; text-align: center; position: relative; flex-shrink: 0; 
+        }
+        .header.simple-header { padding: 16px 20px; display:flex; align-items:center; text-align:left; }
+        .header.simple-header .back-arrow { font-size: 1.6rem; margin-right: 15px; cursor:pointer; line-height: 1; }
+        .header h2 { font-size: 1.15rem; font-weight: 600; margin-bottom: 3px; }
+        .header p { font-size: 0.85rem; opacity: 0.85; }
+        .content { padding: 20px; overflow-y: auto; flex-grow: 1; }
+        .content.no-padding { padding: 0; }
+        .nav-tabs { display: flex; background: #E2E8F0; border-radius: 10px; padding: 5px; margin-bottom: 20px; }
+        .nav-tab { flex: 1; padding: 10px; text-align: center; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.25s ease; color: #4A5568; }
+        .nav-tab.active { background: #4C51BF; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        .card, .list-item-card { background: white; border-radius: 12px; padding: 18px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); transition: all 0.2s ease; cursor:pointer; }
+        .card:hover, .list-item-card:hover { box-shadow: 0 6px 15px rgba(0,0,0,0.12); transform: translateY(-2px); }
+        .card-title { font-weight: 600; color: #2D3748; margin-bottom: 8px; font-size: 1rem; }
+        .card-meta { color: #718096; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
+        .card-icon { margin-right: 12px; font-size: 1.5rem; color: #4C51BF; }
+
+        .article-card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 3px 8px rgba(0,0,0,0.07); display: flex; flex-direction: column; }
+        .article-title { font-weight: 600; color: #2D3748; margin-bottom: 6px; font-size: 0.9rem; line-height: 1.4; }
+        .article-preview { color: #4A5568; font-size: 0.8rem; line-height: 1.5; margin-bottom: 10px; flex-grow: 1; }
+        .article-meta { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #A0AEC0; }
+        .completion-check { color: #38A169; font-size: 1rem; margin-right: 5px; font-weight:bold; }
+        
+        .premium-badge { background: linear-gradient(45deg, #F59E0B, #D97706); color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.65rem; font-weight: 600; }
+        .lock-icon { font-size: 1rem; margin-left: 8px; color: #A0AEC0; vertical-align: middle; }
+        
+        .mcq-container { background: white; border-radius: 12px; padding: 18px; margin-bottom: 16px; box-shadow: 0 3px 8px rgba(0,0,0,0.07); }
+        .mcq-header { margin-bottom: 15px; }
+        .mcq-topic { font-size: 0.8rem; color: #718096; margin-bottom: 5px; }
+        .question { font-weight: 500; color: #2D3748; margin-bottom: 18px; line-height: 1.5; font-size: 0.95rem; }
+        .option { background: #F7FAFC; padding: 12px 15px; margin-bottom: 10px; border-radius: 10px; cursor: pointer; transition: all 0.2s ease; border: 1px solid #E2E8F0; font-size:0.9rem; display: flex; align-items: center;}
+        .option-prefix { margin-right: 10px; font-weight: 600; color: #4C51BF; }
+        .option:hover { background: #EDF2F7; border-color: #CBD5E0; }
+        .option.selected { background: #EBF4FF; border-color: #63B3ED; color: #2C5282; }
+        .option.correct { background: #F0FFF4; border-color: #68D391; color: #2F855A; font-weight: 500; }
+        .option.incorrect { background: #FFF5F5; border-color: #FC8181; color: #C53030; font-weight: 500; }
+        
+        .explanation-box { background: #EBF8FF; border-left: 4px solid #63B3ED; padding: 15px; border-radius: 8px; margin-top: 20px; }
+        .explanation-box h4 { color: #2B6CB0; margin-bottom: 8px; font-size: 0.9rem; font-weight: 600; }
+        .explanation-box p { color: #2C5282; font-size: 0.85rem; line-height: 1.6; }
+        
+        .bottom-nav { flex-shrink: 0; background: white; padding: 8px 0; display: flex; justify-content: space-around; border-top: 1px solid #E2E8F0; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #718096; font-size: 0.7rem; flex:1; padding: 5px 0; cursor:pointer; }
+        .nav-item.active { color: #4C51BF; font-weight: 600; }
+        .nav-icon { font-size: 1.3rem; margin-bottom: 2px; } 
+        
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; color: #4A5568; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; }
+        .form-group input, .form-group select { width: 100%; padding: 12px 15px; border: 1px solid #CBD5E0; border-radius: 8px; font-size: 0.9rem; background: white; }
+        .form-group input:focus, .form-group select:focus { border-color: #4C51BF; box-shadow: 0 0 0 2px rgba(76, 81, 191, 0.2); outline: none; }
+        
+        .button-primary { background: #4C51BF; color: white; padding: 14px 20px; border-radius: 10px; border: none; width: 100%; font-weight: 600; cursor: pointer; font-size: 0.95rem; transition: background-color 0.2s ease; }
+        .button-primary:hover { background: #434190; }
+        .button-secondary { background: #EBF4FF; color: #2C5282; padding: 14px 20px; border-radius: 10px; border: 1px solid #BEE3F8; width: 100%; font-weight: 600; cursor: pointer; font-size: 0.95rem; transition: background-color 0.2s ease; }
+        .button-secondary:hover { background: #E2E8F0; }
+        .button-outline { background: transparent; color: #4C51BF; padding: 13px 20px; border-radius: 10px; border: 1px solid #4C51BF; width: 100%; font-weight: 600; cursor: pointer; font-size: 0.95rem; }
+        .button-warning { background: linear-gradient(45deg, #F59E0B, #D97706); color: white; padding: 14px 20px; border-radius: 10px; border: none; width: 100%; font-weight: 600; cursor: pointer; font-size: 0.95rem; }
+
+
+        .text-divider { text-align: center; margin: 25px 0; color: #A0AEC0; font-size: 0.8rem; position: relative; }
+        .text-divider span { background: #F7FAFC; padding: 0 10px; }
+        .text-divider::before, .text-divider::after { content: ""; display: block; width: calc(50% - 25px); height: 1px; background: #E2E8F0; position: absolute; top: 50%; }
+        .text-divider::before { left: 0; }
+        .text-divider::after { right: 0; }
+        
+        .text-center { text-align: center; }
+        .link { color: #4C51BF; text-decoration: none; font-weight: 500; }
+        .link:hover { text-decoration: underline; }
+        
+        .profile-list-item { display:flex; align-items:center; padding: 16px 0; border-bottom: 1px solid #EDF2F7; cursor:pointer; }
+        .profile-list-item:last-child { border-bottom: none; }
+        .profile-list-icon { margin-right:18px; color: #4C51BF; font-size: 1.3rem; width: 24px; text-align: center; }
+        .profile-list-text { flex-grow:1; color:#2D3748; font-size: 0.9rem; }
+        .profile-list-arrow { color:#A0AEC0; font-size: 1rem; }
+        
+        .toggle-switch { display: flex; align-items: center; justify-content: space-between; }
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; } 
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #CBD5E0; transition: .3s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: #4C51BF; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .download-indicator { display: inline-flex; align-items:center; justify-content:center; width: 22px; height: 22px; border: 2px solid #4C51BF; border-radius: 50%; margin-left: 10px; cursor: pointer; }
+        .download-indicator.downloaded::before { content: '✓'; color: #4C51BF; font-size: 12px; font-weight: bold; }
+        .download-indicator.pending::before { content: '↓'; color: #4C51BF; font-size: 12px; font-weight: bold; }
+        
+        .faq-item { margin-bottom: 12px; background: white; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.06); }
+        .faq-question { padding: 15px; font-weight: 500; color: #2D3748; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; }
+        .faq-question span:last-child { transition: transform 0.2s; } 
+        .faq-answer { padding: 0 15px 15px; color: #4A5568; font-size: 0.85rem; line-height: 1.6; display: none; }
+        .faq-item.open .faq-answer { display: block; }
+        .faq-item.open .faq-question span:last-child { transform: rotate(180deg); }
+
+        .content-actions { display: flex; align-items: center; gap: 15px; margin-top: 5px; }
+        .action-btn { background: none; border: none; cursor: pointer; font-size: 1.2rem; color: #718096; }
+        .action-btn:hover { color: #4C51BF; }
+        .action-btn.bookmarked { color: #ED64A6; } /* Pink for bookmarked */
+
+        .mock-test-summary { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .summary-header { text-align:center; margin-bottom: 20px; }
+        .summary-score { font-size: 2.5rem; font-weight: 700; color: #4C51BF; margin-bottom: 5px; }
+        .summary-details p { font-size: 0.9rem; color: #4A5568; margin-bottom: 8px; display: flex; justify-content: space-between; }
+        .summary-details p span:last-child { font-weight: 600; }
+        .summary-actions { margin-top: 25px; display: flex; flex-direction: column; gap: 12px; }
+
+        .screen-title-bar { text-align: center; color: #2D3748; font-size: 1rem; font-weight: 600; margin-bottom: 15px; padding: 15px 15px 0; }
+        
+        .empty-state { text-align:center; padding:50px 20px; color:#A0AEC0; }
+        .empty-state-icon { font-size:3rem; margin-bottom:15px; }
+        .empty-state-title { font-size:1.1rem; font-weight:600; color:#718096; margin-bottom:8px; }
+        .empty-state-message { font-size:0.9rem; line-height: 1.5;}
+
+        .premium-feature-card { background: linear-gradient(135deg, #667eea, #764ba2); color:white; border-radius: 12px; padding: 20px; text-align:center; }
+        .premium-feature-card .lock-icon { font-size: 2rem; margin-bottom: 15px; color: rgba(255,255,255,0.8); }
+        .premium-feature-card h3 { font-size: 1.2rem; margin-bottom:10px; }
+        .premium-feature-card p { font-size: 0.9rem; opacity: 0.9; margin-bottom:20px; }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="main-title">🏦 BankWiser Pro - Final UI Mockup</h1>
+        
+        <div class="screen-grid">
+            <!-- Splash Screen (from your mock.html - good) -->
+            <div class="screen">
+                <div class="phone-frame"><div class="screen-content"><div class="status-bar"><span>9:41</span><span>100% 🔋</span></div><div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #4C51BF, #6B46C1); color: white;"><div style="font-size: 3.5rem; margin-bottom: 20px;">🏦</div><h2 style="font-size: 1.8rem; font-weight:600; margin-bottom: 10px;">BankWiser Pro</h2><p style="opacity: 0.9; text-align: center; padding: 0 40px; font-size:0.9rem;">Your Key to Internal Promotions</p><div style="margin-top: 40px; width: 180px; height: 4px; background: rgba(255,255,255,0.25); border-radius: 2px; overflow: hidden;"><div style="width: 60%; height: 100%; background: white; border-radius: 2px;"></div></div></div></div></div>
+                <div class="screen-title-bar">Splash Screen</div>
+            </div>
+
+            <!-- Onboarding Screens (from your mock.html - good) -->
+            <div class="screen">
+                <div class="phone-frame"><div class="screen-content"><div class="status-bar"><span>9:41</span><span>100% 🔋</span></div><div style="padding: 40px 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: space-between;"><div><div style="font-size: 4.5rem; margin-bottom: 30px;">🎯</div><h2 style="font-size: 1.4rem; color: #2D3748; margin-bottom: 15px; font-weight:600;">Master Banking & Socio-Economics</h2><p style="color: #4A5568; line-height: 1.6; margin-bottom: 30px; font-size:0.9rem;">Access distilled content on RBI policies, bank circulars, and socio-economic updates.</p><div style="display: flex; justify-content: center; margin-bottom: 30px;"><div style="width: 10px; height: 10px; background: #4C51BF; border-radius: 50%; margin: 0 5px;"></div><div style="width: 8px; height: 8px; background: #CBD5E0; border-radius: 50%; margin: 0 5px;"></div><div style="width: 8px; height: 8px; background: #CBD5E0; border-radius: 50%; margin: 0 5px;"></div></div></div><div><button class="button-primary" style="margin-bottom:15px;">Next</button><a href="#" class="link" style="font-size: 0.8rem;">Skip</a></div></div></div></div>
+                <div class="screen-title-bar">Onboarding - Expertise</div>
+            </div>
+            <div class="screen">
+                <div class="phone-frame"><div class="screen-content"><div class="status-bar"><span>9:41</span><span>100% 🔋</span></div><div style="padding: 40px 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: space-between;"><div><div style="font-size: 4.5rem; margin-bottom: 30px;">🎧</div><h2 style="font-size: 1.4rem; color: #2D3748; margin-bottom: 15px; font-weight:600;">Learn On-the-Go</h2><p style="color: #4A5568; line-height: 1.6; margin-bottom: 30px; font-size:0.9rem;">Listen to audio summaries. Practice MCQs to test your knowledge anytime, anywhere.</p><div style="display: flex; justify-content: center; margin-bottom: 30px;"><div style="width: 8px; height: 8px; background: #CBD5E0; border-radius: 50%; margin: 0 5px;"></div><div style="width: 10px; height: 10px; background: #4C51BF; border-radius: 50%; margin: 0 5px;"></div><div style="width: 8px; height: 8px; background: #CBD5E0; border-radius: 50%; margin: 0 5px;"></div></div></div><div><button class="button-primary" style="margin-bottom:15px;">Next</button><a href="#" class="link" style="font-size: 0.8rem;">Skip</a></div></div></div></div>
+                <div class="screen-title-bar">Onboarding - Flexibility</div>
+            </div>
+            <div class="screen">
+                <div class="phone-frame"><div class="screen-content"><div class="status-bar"><span>9:41</span><span>100% 🔋</span></div><div style="padding: 40px 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: space-between;"><div><div style="font-size: 4.5rem; margin-bottom: 30px;">🎁</div><h2 style="font-size: 1.4rem; color: #2D3748; margin-bottom: 15px; font-weight:600;">5 Months' Content Free!</h2><p style="color: #4A5568; line-height: 1.6; margin-bottom: 30px; font-size:0.9rem;">Get full access to our initial content for 5 months. Create an account to begin your journey!</p><div style="display: flex; justify-content: center; margin-bottom: 30px;"><div style="width: 8px; height: 8px; background: #CBD5E0; border-radius: 50%; margin: 0 5px;"></div><div style="width: 8px; height: 8px; background: #CBD5E0; border-radius: 50%; margin: 0 5px;"></div><div style="width: 10px; height: 10px; background: #4C51BF; border-radius: 50%; margin: 0 5px;"></div></div></div><button class="button-primary">Login with Google</button></div></div></div>
+                <div class="screen-title-bar">Onboarding - Get Started</div>
+            </div>
+            
+            <!-- Login Screen (Simplified - from your mock.html - good) -->
+            <div class="screen">
+                <div class="phone-frame"><div class="screen-content"><div class="status-bar"><span>9:41</span><span>100% 🔋</span></div><div class="header simple-header"><span class="back-arrow">‹</span> <h2>Access BankWiser Pro</h2></div><div class="content" style="display:flex; flex-direction:column; justify-content:center; align-items:center;"><p style="font-size:1rem; color:#4A5568; margin-bottom:25px; text-align:center;">Hassle-free login to start your learning journey.</p><button class="button-secondary" style="display:flex; align-items:center; justify-content:center; width:80%;"><span style="font-size:1.2rem; margin-right:10px;">🇬</span> Continue with Google</button></div></div></div>
+                <div class="screen-title-bar">Login</div>
+            </div>
+
+            <!-- Home Dashboard (from your mock.html - good, slight tweak to meta) -->
+            <div class="screen">
+                <div class="phone-frame"><div class="screen-content"><div class="status-bar"><span>9:41</span><span>100% 🔋</span></div><div class="header"><h2>Welcome back, Arun! 👋</h2><p>Ready to ace your promotion?</p></div><div class="content"><div class="search-bar"><span style="font-size:1.1rem; color:#A0AEC0;">🔍</span><input type="text" class="search-input" placeholder="Search Notes, MCQs, Policies..."></div><h3 style="color: #2D3748; font-weight: 600; margin-bottom: 15px; font-size: 1.05rem;">Key Categories</h3><div class="card"><div style="display:flex; align-items:center;"><span class="card-icon">🏦</span><div><div class="card-title">RBI Policies & Guidelines</div><div class="card-meta"><span>45 Notes • 200+ MCQs</span></div></div></div></div><div class="card"><div style="display:flex; align-items:center;"><span class="card-icon">🏢</span><div><div class="card-title">Public Sector Bank Policies</div><div class="card-meta"><span>23 Notes • 150+ MCQs</span></div></div></div></div><div class="card"><div style="display:flex; align-items:center;"><span class="card-icon">🌍</span><div><div class="card-title">Socio-Economic Awareness</div><div class="card-meta"><span>123 Notes • 300+ MCQs</span></div></div></div></div><div class="card"><div style="display:flex; align-items:center;"><span class="card-icon">📜</span><div><div class="card-title">PSB Circulars Digest</div><div class="card-meta"><span>156 Notes • 100+ MCQs</span></div></div></div></div></div><div class="bottom-nav"><div class="nav-item active"><span class="nav-icon">🏠</span><span>Home</span></div><div class="nav-item"><span class="nav-icon">✍️</span><span>Practice</span></div><div class="nav-item"><span class="nav-icon">📚</span><span>Learn</span></div><div class="nav-item"><span class="nav-icon">👤</span><span>Profile</span></div></div></div></div>
+                <div class="screen-title-bar">Home Dashboard</div>
+            </div>
+
+            <!-- Category Detail -> Topic List (from your mock.html - good) -->
+            <div class="screen">
+                <div class="phone-frame"><div class="screen-content"><div class="status-bar"><span>9:41</span><span>100% 🔋</span></div><div class="header simple-header"><span class="back-arrow">‹</span> <h2>🏦 RBI Policies</h2></div><div class="content"><p style="font-size:0.9rem; color: #4A5568; margin-bottom:20px;">Select a topic to dive deeper or practice MCQs.</p><div class="card"><div class="card-title">Monetary Policy Framework</div><div class="card-meta"><span>12 Notes • 50 MCQs</span> <span class="download-indicator pending"></span></div></div><div class="card"><div class="card-title">KYC & AML Guidelines</div><div class="card-meta"><span>8 Notes • 40 MCQs</span> <span class="premium-badge" style="margin-left:5px;">PREMIUM</span> <span class="lock-icon">🔒</span></div></div><div class="card"><div class="card-title">Digital Banking Security</div><div class="card-meta"><span>10 Notes • 60 MCQs</span> <span class="download-indicator downloaded"></span></div></div><div class="card"><div class="card-title">Priority Sector Lending</div><div class="card-meta"><span>15 Notes • 50 MCQs</span></div></div></div><div class="bottom-nav"><div class="nav-item"><span class="nav-icon">🏠</span><span>Home</span></div><div class="nav-item"><span class="nav-icon">✍️</span><span>Practice</span></div><div class="nav-item active"><span class="nav-icon">📚</span><span>Learn</span></div><div class="nav-item"><span class="nav-icon">👤</span><span>Profile</span></div></div></div></div>
+                <div class="screen-title-bar">Category Topics</div>
+            </div>
+            
+            <!-- Topic Detail -> Content Type Tabs (Notes) (from your mock.html - good) -->
+            <div class="screen">
+                <div class="phone-frame"><div class="screen-content"><div class="status-bar"><span>9:41</span><span>100% 🔋</span></div><div class="header simple-header"><span class="back-arrow">‹</span> <h2>Digital Banking Security</h2></div><div class="content"><div class="nav-tabs"><div class="nav-tab active">Notes (10)</div><div class="nav-tab">FAQs (5)</div><div class="nav-tab">Audio (2)</div><div class="nav-tab">MCQs (60)</div></div><div class="article-card"><div class="article-title"><span class="completion-check">✓</span> RBI's New Framework for Digital Payments Security</div><div class="article-preview">An overview of the updated guidelines focusing on risk assessment, fraud prevention, and IT governance...</div><div class="article-meta"><span>📅 June 2025</span><div class="content-actions"><button class="action-btn" title="Share">🔗</button><button class="action-btn bookmarked" title="Bookmarked">❤️</button><span class="download-indicator downloaded"></span></div></div></div><div class="article-card"><div class="article-title">Cybersecurity in Mobile Banking Apps <span class="lock-icon">🔒</span></div><div class="article-preview">Key considerations for securing mobile banking applications, including authentication, data encryption...</div><div class="article-meta"><span>📅 May 2025</span><div class="content-actions"><button class="action-btn" title="Share">🔗</button><button class="action-btn" title="Bookmark">🤍</button><span class="premium-badge">PREMIUM</span></div></div></div></div><div class="bottom-nav"><div class="nav-item"><span class="nav-icon">🏠</span><span>Home</span></div><div class="nav-item"><span class="nav-icon">✍️</span><span>Practice</span></div><div class="nav-item active"><span class="nav-icon">📚</span><span>Learn</span></div><div class="nav-item"><span class="nav-icon">👤</span><span>Profile</span></div></div></div></div>
+                <div class="screen-title-bar">Topic - Notes</div>
+            </div>
+
+            <!-- Note Reader Screen (from your mock.html - good, minor tweaks) -->
+            <div class="screen">
+                <div class="phone-frame"><div class="screen-content"><div class="status-bar"><span>9:41</span><span>100% 🔋</span></div><div class="header simple-header" style="align-items: flex-start; padding-bottom: 10px;"><span class="back-arrow" style="margin-top:2px;">‹</span><div style="flex-grow:1;"><h2 style="font-size:1.05rem;">RBI's New Framework for Digital Payments Security</h2><p style="font-size:0.75rem; opacity:0.8;">Topic: Digital Banking Security</p></div><div class="content-actions" style="margin-top:0;"><button class="action-btn" title="Share">🔗</button><button class="action-btn bookmarked" title="Bookmarked">❤️</button><span class="download-indicator downloaded"></span></div></div><div class="content" style="padding-top:10px;"><p style="font-size:0.8rem; color: #A0AEC0; margin-bottom:15px; border-bottom: 1px solid #EDF2F7; padding-bottom:10px;">Published: June 2025 • Category: RBI Policies</p><div style="color: #2D3748; line-height: 1.7; font-size: 0.9rem;"><p style="margin-bottom: 1em;">The Reserve Bank of India (RBI) has recently unveiled a comprehensive new framework...</p><h4 style="font-weight:600; margin-top:1.5em; margin-bottom:0.5em; font-size:0.95rem;">Key Pillars:</h4><ul style="list-style-position: inside; padding-left: 5px; margin-bottom:1em;"><li style="margin-bottom:0.5em;">Robust Governance.</li><li>Enhanced Authentication.</li></ul><p>Entities are required to conduct thorough risk assessments...</p></div><div style="margin-top:20px; display:flex; justify-content:space-between; align-items:center;"><button class="button-outline" style="width:auto; padding: 8px 15px; font-size:0.85rem;">Mark as Completed</button></div></div></div></div>
+                <div class="screen-title-bar">Note Reader</div>
+            </div>
+
+            <!-- Practice Hub Screen (Enhanced - from previous comprehensive) -->
+            <div class="screen">
+                <div class="phone-frame"><div class="screen-content"><div class="status-bar"><span>9:41</span><span>100% 🔋</span></div><div class="header"><h2>✍️ Practice Hub</h2><p>Sharpen your knowledge</p></div><div class="content"><div class="card"><div style="display:flex; align-items:center;"><span class="card-icon">⏱️</span><div><div class="card-title">Attempt Full Mock Test</div><div class="card-meta"><span>Simulate promotion exam conditions</span></div></div></div></div><div class="card"><div style="display:flex; align-items:center;"><span class="card-icon">📚</span><div><div class="card-title">Practice by Category/Topic</div><div class="card-meta"><span>Focus on specific areas</span></div></div></div></div><div class="card"><div style="display:flex; align-items:center;"><span class="card-icon">🔀</span><div><div class="card-title">Quick Random Quiz</div><div class="card-meta"><span>10-20 mixed questions</span></div></div></div></div><div class="card"><div style="display:flex; align-items:center;"><span class="card-icon">🚩</span><div><div class="card-title">Review Bookmarked MCQs</div><div class="card-meta"><span>Revisit challenging questions</span></div></div></div></div><div class="card"><div style="display:flex; align-items:center;"><span class="card-icon">📊</span><div><div class="card-title">View Performance Analytics</div><div class="card-meta"><span>Track your progress and weak areas</span></div></div></div></div></div><div class="bottom-nav"><div class="nav-item"><span class="nav-icon">🏠</span><span>Home</span></div><div class="nav-item active"><span class="nav-icon">✍️</span><span>Practice</span></div><div class="nav-item"><span class="nav-icon">📚</span><span>Learn</span></div><div class="nav-item"><span class="nav-icon">👤</span><span>Profile</span></div></div></div></div>
+                <div class="screen-title-bar">Practice Hub</div>
+            </div>
+
+            <!-- Mock Test Setup Screen (from previous comprehensive) -->
+            <div class="screen">
+                <div class="phone-frame"><div class="screen-content"><div class="status-bar"><span>9:41</span><span>100% 🔋</span></div><div class="header simple-header"><span class="back-arrow">‹</span> <h2>Setup Mock Test</h2></div><div class="content"><div class="form-group"><label for="num-questions">Number of Questions</label><select id="num-questions"><option value="50" selected>50 Questions</option><option value="100">100 Questions</option></select></div><div class="form-group"><label>Select Categories (Optional)</label><div style="max-height: 150px; overflow-y:auto; border:1px solid #CBD5E0; border-radius:8px; padding:10px; background:white;"><div style="margin-bottom:8px;"><label><input type="checkbox" style="margin-right:8px;">RBI Policies</label></div><div style="margin-bottom:8px;"><label><input type="checkbox" style="margin-right:8px;">PSB Policies</label></div><div style="margin-bottom:8px;"><label><input type="checkbox" style="margin-right:8px;">Socio-Economic Awareness</label></div></div></div><div class="form-group"><label for="difficulty">Difficulty Level</label><select id="difficulty"><option value="mixed" selected>Mixed (Recommended)</option></select></div><button class="button-primary" style="margin-top:20px;">Start Mock Test</button></div></div></div>
+                <div class="screen-title-bar">Mock Test Setup</div>
+            </div>
+            
+            <!-- MCQ Practice Screen (from your mock.html - good) -->
+            <div class="screen">
+                <div class="phone-frame"><div class="screen-content"><div class="status-bar"><span>9:41</span><span>Timer: 01:23:45</span></div><div class="header simple-header" style="padding-bottom:10px; padding-top:10px;"><span class="back-arrow" title="End Test">‹</span><div style="flex-grow:1;"><h2 style="font-size:1rem;">MCQ Practice</h2><p style="font-size:0.75rem;">Topic: KYC & AML Guidelines</p></div><span style="font-size:0.8rem; font-weight:500;">5 / 20</span></div><div class="content"><div class="progress-bar" style="margin-top:0;"><div class="progress-fill" style="width: 25%;"></div></div><div class="mcq-container" style="margin-top:0;"><div class="mcq-header" style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:0.75rem; color:#A0AEC0">Question ID: #MCQ482</span><button class="action-btn" title="Bookmark Question">🚩</button></div><div class="question">What is the threshold for reporting Cash Transaction Reports (CTRs) to FIU-IND?</div><div class="option"><span class="option-prefix">A</span>Above ₹5 lakhs</div><div class="option selected"><span class="option-prefix">B</span>Above ₹10 lakhs</div><div class="option"><span class="option-prefix">C</span>Above ₹2 lakhs in a single day</div><div class="option"><span class="option-prefix">D</span>All cash transactions irrespective of amount</div><div style="display: flex; gap:15px; margin-top: 25px;"><button class="button-outline" style="flex:1;">Previous</button><button class="button-primary" style="flex:1;">Next / Submit</button></div></div></div></div></div>
+                <div class="screen-title-bar">MCQ Practice - Topic</div>
+            </div>
+
+             
+            
+            <!-- Mock Test Summary Screen (from previous comprehensive) -->
+            <div class="screen">
+                <div class="phone-frame"><div class="screen-content"><div class="status-bar"><span>9:41</span><span>100% 🔋</span></div><div class="header simple-header"><span class="back-arrow">‹</span> <h2>Mock Test Results</h2></div><div class="content"><div class="mock-test-summary"><div class="summary-header"><div style="font-size:3rem; margin-bottom:10px;">🎉</div><h3 style="font-size:1.3rem; font-weight:600; color:#2D3748;">Test Completed!</h3><p style="font-size:0.9rem; color:#718096;">Here's your performance:</p></div><div class="summary-score">76%</div><p style="text-align:center; font-size:0.9rem; color:#4A5568; margin-bottom:20px;">(38 out of 50 Correct)</p><div class="summary-details"><p><span>Total Questions:</span> <span>50</span></p><p><span>Correct Answers:</span> <span style="color:#38A169;">38</span></p><p><span>Incorrect Answers:</span> <span style="color:#E53E3E;">10</span></p><p><span>Unattempted:</span> <span>2</span></p><p><span>Time Taken:</span> <span>45:32 mins</span></p></div><div class="summary-actions"><button class="button-primary">Review Answers</button><button class="button-outline">Retake Test</button><button class="button-secondary" style="border:none;">Back to Practice Hub</button></div></div></div></div></div>
+                <div class="screen-title-bar">Test Results</div>
+            </div>
+
+            <!-- Search Results Screen (from your mock.html - good) -->
+            <div class="screen">
+                <div class="phone-frame"><div class="screen-content"><div class="status-bar"><span>9:41</span><span>100% 🔋</span></div><div class="header simple-header"><span class="back-arrow">‹</span><input type="text" class="search-input" value="repo rate" style="background: rgba(255,255,255,0.15); color:white; border-radius:8px; padding:8px 12px; margin-left:0;" placeholder="Search..."></div><div class="content"><div class="nav-tabs" style="margin-top:-10px;"><div class="nav-tab active">All (24)</div><div class="nav-tab">Notes (15)</div><div class="nav-tab">MCQs (8)</div><div class="nav-tab">Audio (1)</div></div><p style="font-size:0.8rem; color:#718096; margin-bottom:15px;">Showing results for "repo rate"</p><div class="article-card"><div class="article-title">Note: RBI Keeps <mark style="background: #FEFCBF;">Repo Rate</mark> Unchanged</div><div class="article-preview">The Monetary Policy Committee decided to maintain the current <mark style="background: #FEFCBF;">repo rate</mark> citing inflation concerns...</div><div class="article-meta"><span>📅 RBI Policies</span><span>June 2025</span></div></div><div class="mcq-container" style="padding:12px 15px;"><p style="font-size:0.75rem; color:#A0AEC0; margin-bottom:5px;">MCQ (ID: #MCQ102) - Monetary Policy</p><div class="question" style="font-size:0.9rem; margin-bottom:8px;">What is the primary tool RBI uses to influence the <mark style="background: #FEFCBF;">repo rate</mark>?</div><a href="#" class="link" style="font-size:0.8rem;">View & Practice</a></div></div><div class="bottom-nav"><div class="nav-item active"><span class="nav-icon">🏠</span><span>Home</span></div><div class="nav-item"><span class="nav-icon">✍️</span><span>Practice</span></div><div class="nav-item"><span class="nav-icon">📚</span><span>Learn</span></div><div class="nav-item"><span class="nav-icon">👤</span><span>Profile</span></div></div></div></div>
+                <div class="screen-title-bar">Search Results</div>
+            </div>
+
+            <!-- Bookmarks Screen (New) -->
+            <div class="screen">
+                <div class="phone-frame">
+                    <div class="screen-content">
+                        <div class="status-bar"><span>9:41</span><span>100% 🔋</span></div>
+                        <div class="header">
+                            <h2>🔖 My Bookmarks</h2>
+                            <p>Your saved content for quick access</p>
+                        </div>
+                        <div class="content">
+                            <div class="nav-tabs">
+                                <div class="nav-tab active">All (5)</div>
+                                <div class="nav-tab">Important (2)</div>
+                                <div class="nav-tab">Revision (3)</div>
+                                <div class="nav-tab">Read Later (0)</div>
+                            </div>
+                            <div class="article-card">
+                                <div class="article-title">Note: RBI's New Framework for Digital Payments Security</div>
+                                <div class="article-preview">An overview of the updated guidelines focusing on risk assessment...</div>
+                                <div class="article-meta"><span>🔖 Important</span><span>📅 RBI Policies</span></div>
+                            </div>
+                             <div class="mcq-container" style="padding:12px 15px;">
+                                <p style="font-size:0.75rem; color:#A0AEC0; margin-bottom:5px;">MCQ (ID: #MCQ482) - KYC & AML</p>
+                                <div class="question" style="font-size:0.9rem; margin-bottom:8px;">What is the threshold for CTRs?</div>
+                                <div class="article-meta"><span>🔖 Revision</span><a href="#" class="link" style="font-size:0.8rem;">View Question</a></div>
+                            </div>
+                             <div class="empty-state" style="display:none;"> <!-- Show this if a tab is empty -->
+                                <div class="empty-state-icon">🤷</div>
+                                <h4 class="empty-state-title">No Bookmarks Yet</h4>
+                                <p class="empty-state-message">Tap the ❤️ or 🚩 icon on content to save it here for later.</p>
+                            </div>
+                        </div>
+                        <div class="bottom-nav">
+                            <div class="nav-item"><span class="nav-icon">🏠</span><span>Home</span></div>
+                            <div class="nav-item"><span class="nav-icon">✍️</span><span>Practice</span></div>
+                            <div class="nav-item active"><span class="nav-icon">📚</span><span>Learn</span></div> <!-- Assuming "Learn" could house Bookmarks/Downloads -->
+                            <div class="nav-item"><span class="nav-icon">👤</span><span>Profile</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="screen-title-bar">Bookmarks</div>
+            </div>
+            
+            <!-- Downloads Screen (Conceptual - Audio focused as per spec) -->
+            <div class="screen">
+                <div class="phone-frame"><div class="screen-content"><div class="status-bar"><span>9:41</span><span>100% 🔋</span></div><div class="header"><h2>💾 My Downloads</h2><p>Your offline audio content</p></div><div class="content">
+                <div class="article-card"> <!-- Using article-card style for audio item listing -->
+                    <div style="display:flex; align-items:center; margin-bottom:10px;">
+                       <span style="font-size:1.5rem; margin-right:10px; color:#4C51BF;">🎵</span>
+                       <div class="article-title" style="margin-bottom:0;">Digital Banking Security Explained</div>
+                    </div>
+                    <div class="article-preview">An audio deep-dive into the new RBI guidelines. Key takeaways and impact analysis.</div>
+                    <div class="article-meta">
+                        <span>⏱️ 12:45 min</span>
+                        <button class="action-btn" title="Remove Download" style="color:#E53E3E;">🗑️</button>
+                    </div>
+                </div>
+                 <div class="article-card"> 
+                    <div style="display:flex; align-items:center; margin-bottom:10px;">
+                       <span style="font-size:1.5rem; margin-right:10px; color:#4C51BF;">🎵</span>
+                       <div class="article-title" style="margin-bottom:0;">Understanding Monetary Policy Tools</div>
+                    </div>
+                    <div class="article-preview">A clear explanation of CRR, SLR, Repo Rate, and their impact on the economy.</div>
+                    <div class="article-meta">
+                        <span>⏱️ 09:15 min</span>
+                        <button class="action-btn" title="Remove Download" style="color:#E53E3E;">🗑️</button>
+                    </div>
+                </div>
+                <div class="empty-state" style="display:none;">
+                    <div class="empty-state-icon">📥</div>
+                    <h4 class="empty-state-title">No Audio Downloads</h4>
+                    <p class="empty-state-message">Tap the <span class="download-indicator pending" style="display:inline-flex; vertical-align:middle;"></span> icon on audio content to download it for offline listening.</p>
+                </div>
+                </div><div class="bottom-nav"><div class="nav-item"><span class="nav-icon">🏠</span><span>Home</span></div><div class="nav-item"><span class="nav-icon">✍️</span><span>Practice</span></div><div class="nav-item active"><span class="nav-icon">📚</span><span>Learn</span></div><div class="nav-item"><span class="nav-icon">👤</span><span>Profile</span></div></div></div></div>
+                <div class="screen-title-bar">Downloads</div>
+            </div>
+            
+            <!-- Why Go Premium Screen (New) -->
+            <div class="screen">
+                <div class="phone-frame">
+                    <div class="screen-content">
+                        <div class="status-bar"><span>9:41</span><span>100% 🔋</span></div>
+                        <div class="header simple-header" style="background: white; color: #2D3748;">
+                           <span class="back-arrow" style="color: #4C51BF;">‹</span> <h2 style="color: #2D3748;">Unlock BankWiser Pro</h2>
+                        </div>
+                        <div class="content" style="background: linear-gradient(180deg, #F7FAFC 0%, #EBF4FF 100%);">
+                            <div style="text-align:center; margin-bottom:25px;">
+                                <div style="font-size: 4rem; margin-bottom: 15px; color: #4C51BF;">🚀</div>
+                                <h3 style="font-size: 1.5rem; font-weight: 700; color: #2D3748; margin-bottom: 10px;">Supercharge Your Promotion Prep!</h3>
+                                <p style="color: #4A5568; font-size: 0.95rem;">Go Premium to get unlimited access and exclusive features.</p>
+                            </div>
+                            
+                            <div class="card" style="padding: 20px;">
+                                <div class="feature-item" style="align-items:flex-start; margin-bottom:18px;">
+                                    <span class="feature-icon" style="font-size:1.2rem; margin-right:15px; color:#38A169;">✓</span>
+                                    <div>
+                                        <h4 style="font-weight:600; font-size:1rem; color:#2D3748; margin-bottom:3px;">Full Content Access</h4>
+                                        <p style="font-size:0.85rem; color:#4A5568; line-height:1.5;">Unlock all notes, advanced MCQs, exclusive audio, and new content beyond the initial 5 months.</p>
+                                    </div>
+                                </div>
+                                <div class="feature-item" style="align-items:flex-start; margin-bottom:18px;">
+                                    <span class="feature-icon" style="font-size:1.2rem; margin-right:15px; color:#38A169;">✓</span>
+                                    <div>
+                                        <h4 style="font-weight:600; font-size:1rem; color:#2D3748; margin-bottom:3px;">Offline Audio Downloads</h4>
+                                        <p style="font-size:0.85rem; color:#4A5568; line-height:1.5;">Download audio summaries and listen anywhere, even without internet.</p>
+                                    </div>
+                                </div>
+                                <div class="feature-item" style="align-items:flex-start; margin-bottom:18px;">
+                                    <span class="feature-icon" style="font-size:1.2rem; margin-right:15px; color:#38A169;">✓</span>
+                                    <div>
+                                        <h4 style="font-weight:600; font-size:1rem; color:#2D3748; margin-bottom:3px;">Advanced Mock Tests</h4>
+                                        <p style="font-size:0.85rem; color:#4A5568; line-height:1.5;">Access more comprehensive mock tests designed to simulate real exam scenarios.</p>
+                                    </div>
+                                </div>
+                                <div class="feature-item" style="align-items:flex-start;">
+                                    <span class="feature-icon" style="font-size:1.2rem; margin-right:15px; color:#38A169;">✓</span>
+                                    <div>
+                                        <h4 style="font-weight:600; font-size:1rem; color:#2D3748; margin-bottom:3px;">Ad-Free Experience</h4>
+                                        <p style="font-size:0.85rem; color:#4A5568; line-height:1.5;">Focus on your studies without any interruptions.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="button-primary" style="margin-top:25px;">Go Premium - ₹1,199/year</button>
+                            <p class="text-center" style="font-size:0.8rem; color:#718096; margin-top:15px;">Or choose <a href="#" class="link">Monthly Plan (₹149/month)</a></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="screen-title-bar">Why Go Premium?</div>
+            </div>
+
+            
+            <!-- Profile & Settings Screen (from your mock.html - good) -->
+            <div class="screen">
+                <div class="phone-frame"><div class="screen-content"><div class="status-bar"><span>9:41</span><span>100% 🔋</span></div><div class="header"><h2>👤 Profile & Settings</h2></div><div class="content"><div style="display:flex; align-items:center; margin-bottom: 25px; padding-bottom:20px; border-bottom: 1px solid #EDF2F7;"><div style="width: 64px; height: 64px; background: linear-gradient(135deg, #4C51BF, #6B46C1); border-radius: 50%; margin-right: 15px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.8rem; font-weight: 600;">A</div><div><h3 style="color: #2D3748; font-weight: 600; font-size:1.1rem; margin-bottom: 4px;">Arun Kumar</h3><p style="color: #10B981; font-size: 0.85rem; font-weight:500;">Premium Member ✨</p><p style="color: #718096; font-size: 0.8rem;">arun.kumar@example.com</p></div></div><div class="list-item-card" style="padding:5px 18px; border:none; box-shadow:none;"><div class="profile-list-item"><span class="profile-list-icon">🔔</span><span class="profile-list-text">Notification Settings</span><div class="toggle-switch"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label></div></div><div class="profile-list-item"><span class="profile-list-icon">🌙</span><span class="profile-list-text">Dark Mode</span><div class="toggle-switch"><label class="switch"><input type="checkbox"><span class="slider"></span></label></div></div><div class="profile-list-item"><span class="profile-list-icon">💎</span><span class="profile-list-text">Manage Subscription</span><span class="profile-list-arrow">›</span></div><div class="profile-list-item"><span class="profile-list-icon">💾</span><span class="profile-list-text">Manage Downloads</span><span class="profile-list-arrow">›</span></div><div class="profile-list-item"><span class="profile-list-icon">❓</span><span class="profile-list-text">Help & Feedback</span><span class="profile-list-arrow">›</span></div><div class="profile-list-item"><span class="profile-list-icon">⭐</span><span class="profile-list-text">Rate BankWiser Pro</span><span class="profile-list-arrow">›</span></div><div class="profile-list-item"><span class="profile-list-icon">📄</span><span class="profile-list-text">Terms & Privacy</span><span class="profile-list-arrow">›</span></div><div class="profile-list-item"><span class="profile-list-icon" style="color:#E53E3E;">🚪</span><span class="profile-list-text" style="color:#E53E3E;">Logout</span></div></div><p style="text-align:center; font-size:0.75rem; color:#A0AEC0; margin-top:20px;">App Version 1.0.0 (Build 101)</p></div><div class="bottom-nav"><div class="nav-item"><span class="nav-icon">🏠</span><span>Home</span></div><div class="nav-item"><span class="nav-icon">✍️</span><span>Practice</span></div><div class="nav-item"><span class="nav-icon">📚</span><span>Learn</span></div><div class="nav-item active"><span class="nav-icon">👤</span><span>Profile</span></div></div></div></div>
+                <div class="screen-title-bar">Profile & Settings</div>
+            </div>
+
+            <!-- MCQ Practice - Correct Answer (New) -->
+            <div class="screen">
+                <div class="phone-frame">
+                    <div class="screen-content">
+                        <div class="status-bar"><span>9:41</span><span>100% 🔋</span></div>
+                        <div class="header"><h2>🎯 Practice MCQs</h2><p>Question 5 of 20</p></div>
+                        <div class="content">
+                            <div class="progress-bar"><div class="progress-fill" style="width: 25%;"></div></div>
+                            <div class="mcq-container">
+                                <div class="question">What is the current repo rate set by RBI as of June 2025?</div>
+                                <div class="option">A) 6.25%</div>
+                                <div class="option correct">B) 6.50%</div>
+                                <div class="option">C) 6.75%</div>
+                                <div class="option">D) 7.00%</div>
+                            </div>
+                            <div class="explanation-box">
+                                <h4>🎉 Correct!</h4>
+
+                            </div>
+                            <button class="button-primary" style="margin-top:20px;">Next Question</button>
+                        </div>
+                         <div class="bottom-nav">
+                            <div class="nav-item"><span class="nav-icon">🏠</span><span>Home</span></div>
+                            <div class="nav-item active"><span class="nav-icon">✍️</span><span>Practice</span></div>
+                            <div class="nav-item"><span class="nav-icon">📚</span><span>Learn</span></div>
+                            <div class="nav-item"><span class="nav-icon">👤</span><span>Profile</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="screen-title">MCQ - Correct</div>
+            </div>
+
+            <!-- MCQ Practice - Incorrect Answer (New) -->
+            <div class="screen">
+                <div class="phone-frame">
+                    <div class="screen-content">
+                        <div class="status-bar"><span>9:41</span><span>100% 🔋</span></div>
+                        <div class="header"><h2>🎯 Practice MCQs</h2><p>Question 6 of 20</p></div>
+                        <div class="content">
+                            <div class="progress-bar"><div class="progress-fill" style="width: 30%;"></div></div>
+                            <div class="mcq-container">
+                                <div class="question">Which committee recommends changes to monetary policy in India?</div>
+                                <div class="option incorrect">A) Finance Committee</div>
+                                <div class="option">B) Economic Advisory Council</div>
+                                <div class="option correct">C) Monetary Policy Committee (MPC)</div>
+                                <div class="option">D) Banking Regulation Committee</div>
+                            </div>
+                             <div class="explanation-box" style="border-left-color: #f87171; background:#fff1f2;">
+                                <h4 style="color: #b91c1c;">💡 Incorrect. Correct answer is C.</h4>
+                           
+                            </div>
+                            <button class="button-primary" style="margin-top:20px;">Next Question</button>
+                        </div>
+                         <div class="bottom-nav">
+                            <div class="nav-item"><span class="nav-icon">🏠</span><span>Home</span></div>
+                            <div class="nav-item active"><span class="nav-icon">✍️</span><span>Practice</span></div>
+                            <div class="nav-item"><span class="nav-icon">📚</span><span>Learn</span></div>
+                            <div class="nav-item"><span class="nav-icon">👤</span><span>Profile</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="screen-title">MCQ - Incorrect</div>
+            </div>
+
+
+
+        <!-- User Flow Description can remain similar to your last version -->
+    </div>
+    <script>
+        // Basic FAQ toggle for mockup purposes
+        document.querySelectorAll('.faq-question').forEach(button => {
+            button.addEventListener('click', () => {
+                const faqItem = button.parentElement;
+                faqItem.classList.toggle('open');
+            });
+        });
+        // Basic tab switching for mockups (very simplified)
+        document.querySelectorAll('.nav-tabs .nav-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                const parentTabs = e.target.closest('.nav-tabs');
+                parentTabs.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+                // In a real app, this would also trigger content change
+            });
+        });
+    </script>
+</body>
+</html>
