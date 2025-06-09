@@ -43,22 +43,23 @@ abstract class ContentDatabase : RoomDatabase() {
                     ContentDatabase::class.java,
                     DATABASE_NAME
                 )
-                // This corrected callback pattern avoids deadlocks.
-                .addCallback(object : Callback() {
-                    override fun onCreate(db: SupportSQLiteDatabase) {
-                        super.onCreate(db)
-                        CoroutineScope(Dispatchers.IO).launch {
-                            // By the time this runs, getDatabase() is safe to call.
-                            getDatabase(context).let {
-                                prePopulate(context, it)
-                            }
-                        }
-                    }
-                })
+                .addCallback(DatabaseCallback(context)) // Use the corrected callback
                 .build()
-
                 INSTANCE = instance
                 instance
+            }
+        }
+    }
+
+    private class DatabaseCallback(private val context: Context) : Callback() {
+        override fun onCreate(db: SupportSQLiteDatabase) {
+            super.onCreate(db)
+            // Get the singleton instance AFTER it has been created and assigned.
+            val instance = INSTANCE
+            if (instance != null) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    prePopulate(context, instance)
+                }
             }
         }
 
@@ -69,62 +70,65 @@ abstract class ContentDatabase : RoomDatabase() {
             // Populate Categories
             val categoryCursor = assetDb.rawQuery("SELECT * FROM Categories", null)
             val categories = mutableListOf<CategoryEntity>()
-            while (categoryCursor.moveToNext()) {
-                val idIndex = categoryCursor.getColumnIndex("category_id")
-                val nameIndex = categoryCursor.getColumnIndex("category_name")
-                if (idIndex != -1) {
-                    val id = categoryCursor.getString(idIndex)
-                    if (id != null) {
-                        val name = if (nameIndex != -1) categoryCursor.getString(nameIndex) else null
-                        categories.add(CategoryEntity(categoryId = id, categoryName = name))
+            categoryCursor.use { cursor ->
+                while (cursor.moveToNext()) {
+                    val idIndex = cursor.getColumnIndex("category_id")
+                    val nameIndex = cursor.getColumnIndex("category_name")
+                    if (idIndex != -1) {
+                        val id = cursor.getString(idIndex)
+                        if (id != null) {
+                            val name = if (nameIndex != -1) cursor.getString(nameIndex) else null
+                            categories.add(CategoryEntity(categoryId = id, categoryName = name))
+                        }
                     }
                 }
             }
-            categoryCursor.close()
             database.categoryDao().insertAll(categories)
 
             // Populate SubCategories
             val subCategoryCursor = assetDb.rawQuery("SELECT * FROM SubCategories", null)
             val subCategories = mutableListOf<SubCategoryEntity>()
-            while (subCategoryCursor.moveToNext()) {
-                val idIndex = subCategoryCursor.getColumnIndex("sub_category_id")
-                val catIdIndex = subCategoryCursor.getColumnIndex("category_id")
-                val nameIndex = subCategoryCursor.getColumnIndex("sub_category_name")
-                if (idIndex != -1 && catIdIndex != -1) {
-                    val id = subCategoryCursor.getString(idIndex)
-                    val catId = subCategoryCursor.getString(catIdIndex)
-                    if (id != null && catId != null) {
-                        val name = if (nameIndex != -1) subCategoryCursor.getString(nameIndex) else null
-                        subCategories.add(SubCategoryEntity(subCategoryId = id, categoryId = catId, subCategoryName = name))
+            subCategoryCursor.use { cursor ->
+                while (cursor.moveToNext()) {
+                    val idIndex = cursor.getColumnIndex("sub_category_id")
+                    val catIdIndex = cursor.getColumnIndex("category_id")
+                    val nameIndex = cursor.getColumnIndex("sub_category_name")
+                    if (idIndex != -1 && catIdIndex != -1) {
+                        val id = cursor.getString(idIndex)
+                        val catId = cursor.getString(catIdIndex)
+                        if (id != null && catId != null) {
+                            val name = if (nameIndex != -1) cursor.getString(nameIndex) else null
+                            subCategories.add(SubCategoryEntity(subCategoryId = id, categoryId = catId, subCategoryName = name))
+                        }
                     }
                 }
             }
-            subCategoryCursor.close()
             database.subCategoryDao().insertAll(subCategories)
 
             // Populate Notes
             val noteCursor = assetDb.rawQuery("SELECT * FROM Notes", null)
             val notes = mutableListOf<NoteEntity>()
-            while (noteCursor.moveToNext()) {
-                val idIndex = noteCursor.getColumnIndex("note_id")
-                val subCatIdIndex = noteCursor.getColumnIndex("sub_category_id")
-                val titleIndex = noteCursor.getColumnIndex("title")
-                val bodyIndex = noteCursor.getColumnIndex("body")
-                if (idIndex != -1) {
-                    val id = noteCursor.getString(idIndex)
-                    if(id != null) {
-                        val subCatId = if (subCatIdIndex != -1) noteCursor.getString(subCatIdIndex) else null
-                        val title = if (titleIndex != -1) noteCursor.getString(titleIndex) else null
-                        val body = if (bodyIndex != -1) noteCursor.getString(bodyIndex) else null
-                        notes.add(NoteEntity(noteId = id, subCategoryId = subCatId, title = title, body = body))
+            noteCursor.use { cursor ->
+                while (cursor.moveToNext()) {
+                    val idIndex = cursor.getColumnIndex("note_id")
+                    val subCatIdIndex = cursor.getColumnIndex("sub_category_id")
+                    val titleIndex = cursor.getColumnIndex("title")
+                    val bodyIndex = cursor.getColumnIndex("body")
+                    if (idIndex != -1) {
+                        val id = cursor.getString(idIndex)
+                        if(id != null) {
+                            val subCatId = if (subCatIdIndex != -1) cursor.getString(subCatIdIndex) else null
+                            val title = if (titleIndex != -1) cursor.getString(titleIndex) else null
+                            val body = if (bodyIndex != -1) cursor.getString(bodyIndex) else null
+                            notes.add(NoteEntity(noteId = id, subCategoryId = subCatId, title = title, body = body))
+                        }
                     }
                 }
             }
-            noteCursor.close()
             database.noteDao().insertAll(notes)
 
             assetDb.close()
-            assetDbFile.delete() // Clean up the temp file
+            assetDbFile.delete()
         }
 
         private fun extractAssetDb(context: Context): File? {
