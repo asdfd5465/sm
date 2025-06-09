@@ -4,11 +4,10 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-// Simplified for Phase 2
 @Entity(tableName = "Notes")
 data class NoteEntity(
     @PrimaryKey @ColumnInfo(name = "note_id") val noteId: String,
-    @ColumnInfo(name = "title") val title: String?, // Changed from String
-    @ColumnInfo(name = "body") val body: String?, // Changed from String
-    @ColumnInfo(name = "sub_category_id") val subCategoryId: String? // Changed from String
+    @ColumnInfo(name = "title") val title: String?,
+    @ColumnInfo(name = "body") val body: String?,
+    @ColumnInfo(name = "sub_category_id") val subCategoryId: String?
 )
