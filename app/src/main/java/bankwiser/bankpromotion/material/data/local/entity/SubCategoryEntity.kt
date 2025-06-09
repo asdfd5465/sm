@@ -18,6 +18,6 @@ import androidx.room.PrimaryKey
 )
 data class SubCategoryEntity(
     @PrimaryKey @ColumnInfo(name = "sub_category_id") val subCategoryId: String,
-    @ColumnInfo(name = "category_id") val categoryId: String?, // Changed from String
-    @ColumnInfo(name = "sub_category_name") val subCategoryName: String? // Changed from String
+    @ColumnInfo(name = "category_id") val categoryId: String?,
+    @ColumnInfo(name = "sub_category_name") val subCategoryName: String?
 )
