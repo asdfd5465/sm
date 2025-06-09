@@ -1,6 +1,5 @@
 package bankwiser.bankpromotion.material.ui.screens.notes
 
-import android.app.Application
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -16,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSavedStateRegistryOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.ui.viewmodel.NoteDetailViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.SavedStateViewModelFactory
 
@@ -24,11 +24,12 @@ import bankwiser.bankpromotion.material.ui.viewmodel.SavedStateViewModelFactory
 fun NoteReaderScreen(
     onNavigateUp: () -> Unit
 ) {
-    val application = LocalContext.current.applicationContext as Application
+    val context = LocalContext.current
+    val repository = (context.applicationContext as BankWiserApplication).contentRepository
     val viewModel: NoteDetailViewModel = viewModel(
         factory = SavedStateViewModelFactory(
             owner = LocalSavedStateRegistryOwner.current,
-            application = application
+            repository = repository
         )
     )
     val note by viewModel.note.collectAsState()
