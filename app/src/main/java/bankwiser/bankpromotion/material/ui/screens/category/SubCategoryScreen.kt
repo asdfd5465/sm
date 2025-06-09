@@ -1,5 +1,6 @@
 package bankwiser.bankpromotion.material.ui.screens.category
 
+import android.app.Application
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,9 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSavedStateRegistryOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.data.local.entity.SubCategoryEntity
-import bankwiser.bankpromotion.material.data.repository.ContentRepository
 import bankwiser.bankpromotion.material.ui.viewmodel.SavedStateViewModelFactory
 import bankwiser.bankpromotion.material.ui.viewmodel.SubCategoryViewModel
 
@@ -27,12 +26,11 @@ fun SubCategoryScreen(
     onSubCategoryClick: (subCategoryId: String) -> Unit,
     onNavigateUp: () -> Unit
 ) {
-    val context = LocalContext.current
-    val repository = ContentRepository((context.applicationContext as BankWiserApplication).contentDatabase)
+    val application = LocalContext.current.applicationContext as Application
     val viewModel: SubCategoryViewModel = viewModel(
         factory = SavedStateViewModelFactory(
             owner = LocalSavedStateRegistryOwner.current,
-            repository = repository
+            application = application
         )
     )
     val subCategories by viewModel.subCategories.collectAsState()
