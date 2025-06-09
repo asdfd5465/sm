@@ -51,23 +51,32 @@ fun SubCategoryScreen(
     ) { padding ->
         LazyColumn(modifier = Modifier.padding(padding).padding(horizontal = 8.dp)) {
             items(subCategories) { subCategory ->
-                SubCategoryItem(subCategory = subCategory, onClick = { onSubCategoryClick(subCategory.subCategoryId) })
+                val isClickable = subCategory.subCategoryId != null
+                SubCategoryItem(
+                    subCategory = subCategory,
+                    onClick = {
+                        if (isClickable) {
+                            onSubCategoryClick(subCategory.subCategoryId)
+                        }
+                    },
+                    isClickable = isClickable
+                )
             }
         }
     }
 }
 
 @Composable
-fun SubCategoryItem(subCategory: SubCategoryEntity, onClick: () -> Unit) {
+fun SubCategoryItem(subCategory: SubCategoryEntity, onClick: () -> Unit, isClickable: Boolean) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp, horizontal = 8.dp)
-            .clickable(onClick = onClick),
+            .then(if (isClickable) Modifier.clickable(onClick = onClick) else Modifier),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Text(
-            text = subCategory.subCategoryName,
+            text = subCategory.subCategoryName ?: "Unnamed Topic",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(16.dp)
         )
