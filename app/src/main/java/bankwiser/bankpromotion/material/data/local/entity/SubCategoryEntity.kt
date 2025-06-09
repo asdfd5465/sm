@@ -3,6 +3,7 @@ package bankwiser.bankpromotion.material.data.local.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
@@ -12,7 +13,8 @@ import androidx.room.PrimaryKey
         parentColumns = ["category_id"],
         childColumns = ["category_id"],
         onDelete = ForeignKey.CASCADE
-    )]
+    )],
+    indices = [Index(value = ["category_id"])] // This line fixes the warning
 )
 data class SubCategoryEntity(
     @PrimaryKey @ColumnInfo(name = "sub_category_id") val subCategoryId: String,
