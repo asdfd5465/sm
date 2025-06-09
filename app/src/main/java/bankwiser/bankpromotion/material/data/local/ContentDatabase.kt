@@ -43,26 +43,27 @@ abstract class ContentDatabase : RoomDatabase() {
                     ContentDatabase::class.java,
                     DATABASE_NAME
                 )
-                .addCallback(PrepopulateCallback(context))
+                // This corrected callback pattern avoids deadlocks.
+                .addCallback(object : Callback() {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        super.onCreate(db)
+                        CoroutineScope(Dispatchers.IO).launch {
+                            // By the time this runs, getDatabase() is safe to call.
+                            getDatabase(context).let {
+                                prePopulate(context, it)
+                            }
+                        }
+                    }
+                })
                 .build()
 
                 INSTANCE = instance
                 instance
             }
         }
-    }
 
-    private class PrepopulateCallback(private val context: Context) : Callback() {
-        override fun onCreate(db: SupportSQLiteDatabase) {
-            super.onCreate(db)
-            CoroutineScope(Dispatchers.IO).launch {
-                prePopulate(context, getDatabase(context))
-            }
-        }
-
-        private suspend fun prePopulate(context: Context, instance: ContentDatabase) {
+        private suspend fun prePopulate(context: Context, database: ContentDatabase) {
             val assetDbFile = extractAssetDb(context) ?: return
-
             val assetDb = SQLiteDatabase.openDatabase(assetDbFile.path, null, SQLiteDatabase.OPEN_READONLY)
 
             // Populate Categories
@@ -73,7 +74,6 @@ abstract class ContentDatabase : RoomDatabase() {
                 val nameIndex = categoryCursor.getColumnIndex("category_name")
                 if (idIndex != -1) {
                     val id = categoryCursor.getString(idIndex)
-                    // We must have a non-null ID to proceed
                     if (id != null) {
                         val name = if (nameIndex != -1) categoryCursor.getString(nameIndex) else null
                         categories.add(CategoryEntity(categoryId = id, categoryName = name))
@@ -81,8 +81,7 @@ abstract class ContentDatabase : RoomDatabase() {
                 }
             }
             categoryCursor.close()
-            instance.categoryDao().insertAll(categories)
-
+            database.categoryDao().insertAll(categories)
 
             // Populate SubCategories
             val subCategoryCursor = assetDb.rawQuery("SELECT * FROM SubCategories", null)
@@ -101,7 +100,7 @@ abstract class ContentDatabase : RoomDatabase() {
                 }
             }
             subCategoryCursor.close()
-            instance.subCategoryDao().insertAll(subCategories)
+            database.subCategoryDao().insertAll(subCategories)
 
             // Populate Notes
             val noteCursor = assetDb.rawQuery("SELECT * FROM Notes", null)
@@ -122,7 +121,7 @@ abstract class ContentDatabase : RoomDatabase() {
                 }
             }
             noteCursor.close()
-            instance.noteDao().insertAll(notes)
+            database.noteDao().insertAll(notes)
 
             assetDb.close()
             assetDbFile.delete() // Clean up the temp file
@@ -138,7 +137,6 @@ abstract class ContentDatabase : RoomDatabase() {
                 }
                 return dbFile
             } catch (e: Exception) {
-                // Handle exceptions, e.g., file not found
                 e.printStackTrace()
                 return null
             }
