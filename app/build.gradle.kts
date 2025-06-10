@@ -2,7 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
-    // Add the Google Services plugin
+    // This plugin MUST be present to auto-generate the string resource
     id("com.google.gms.google-services")
 }
 
