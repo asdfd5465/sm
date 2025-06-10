@@ -66,12 +66,14 @@ class MainActivity : ComponentActivity() {
                         authViewModel = authViewModel,
                         onSignInClick = {
                             lifecycleScope.launch {
-                                val signInIntentSender = googleAuthUiClient.signIn()
+                                // We now read the string resource directly here and pass it
+                                val serverClientId = getString(R.string.default_web_client_id)
+                                val signInIntentSender = googleAuthUiClient.signIn(serverClientId)
+
                                 if (signInIntentSender == null) {
-                                    // THIS IS THE NEW ERROR FEEDBACK
                                     Toast.makeText(
                                         applicationContext,
-                                        "Could not start sign-in. Check configuration.",
+                                        "Could not start sign-in. Check Web Client ID.",
                                         Toast.LENGTH_SHORT
                                     ).show()
                                     return@launch
