@@ -1,3 +1,5 @@
+import java.util.Base64 // THIS IS THE FIX
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -21,8 +23,8 @@ android {
             if (keystoreBase64 != null) {
                 // Decode the Base64 keystore from environment variable
                 val keystoreFile = project.rootProject.file("release.jks")
-                keystoreFile.writeBytes(java.util.Base64.getDecoder().decode(keystoreBase64))
-                
+                keystoreFile.writeBytes(Base64.getDecoder().decode(keystoreBase64))
+
                 storeFile = keystoreFile
                 storePassword = keystorePassword
                 this.keyAlias = keyAlias
