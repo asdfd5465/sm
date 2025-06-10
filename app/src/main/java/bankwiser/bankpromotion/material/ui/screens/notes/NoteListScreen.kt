@@ -12,11 +12,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.data.model.Note
+import bankwiser.bankpromotion.material.ui.theme.TextPrimary
+import bankwiser.bankpromotion.material.ui.theme.TextSecondary
 import bankwiser.bankpromotion.material.ui.viewmodel.NoteListViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.SavedStateViewModelFactory
 
@@ -34,43 +37,57 @@ fun NoteListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Notes") },
+                title = { Text("Notes") }, // Later this can show Topic Name
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         }
     ) { padding ->
-        LazyColumn(modifier = Modifier.padding(padding).padding(horizontal = 8.dp)) {
+        LazyColumn(
+            modifier = Modifier.padding(padding),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             items(notes) { note ->
-                NoteItem(note = note, onClick = { onNoteClick(note.id) })
+                NoteItemCard(note = note, onClick = { onNoteClick(note.id) })
             }
         }
     }
 }
 
 @Composable
-fun NoteItem(note: Note, onClick: () -> Unit) {
+fun NoteItemCard(note: Note, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp, horizontal = 8.dp)
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.large
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = note.title,
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary,
+                lineHeight = MaterialTheme.typography.titleMedium.lineHeight * 1.4
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = note.body,
                 style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                color = TextSecondary,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.5
             )
         }
     }
