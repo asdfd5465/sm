@@ -10,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -18,8 +17,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.data.model.SubCategory
-import bankwiser.bankpromotion.material.ui.theme.TextPrimary
-import bankwiser.bankpromotion.material.ui.theme.TextSecondary
 import bankwiser.bankpromotion.material.ui.viewmodel.SavedStateViewModelFactory
 import bankwiser.bankpromotion.material.ui.viewmodel.SubCategoryViewModel
 
@@ -76,14 +73,14 @@ fun TopicCard(subCategory: SubCategory, onClick: () -> Unit) {
             Text(
                 text = subCategory.name,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
+                fontWeight = FontWeight.SemiBold
+                // 'color' parameter removed
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Notes & MCQs Available",
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
+                style = MaterialTheme.typography.bodySmall
+                // 'color' parameter removed
             )
         }
     }
