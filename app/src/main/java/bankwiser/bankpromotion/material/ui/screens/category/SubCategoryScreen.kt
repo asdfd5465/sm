@@ -12,11 +12,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalSavedStateRegistryOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
-import bankwiser.bankpromotion.material.data.local.entity.SubCategoryEntity
+import bankwiser.bankpromotion.material.data.model.SubCategory
 import bankwiser.bankpromotion.material.ui.viewmodel.SavedStateViewModelFactory
 import bankwiser.bankpromotion.material.ui.viewmodel.SubCategoryViewModel
 
@@ -27,14 +26,8 @@ fun SubCategoryScreen(
     onNavigateUp: () -> Unit
 ) {
     val context = LocalContext.current
-    // Correctly get the singleton repository instance from the Application class
     val repository = (context.applicationContext as BankWiserApplication).contentRepository
-    val viewModel: SubCategoryViewModel = viewModel(
-        factory = SavedStateViewModelFactory(
-            owner = LocalSavedStateRegistryOwner.current,
-            repository = repository
-        )
-    )
+    val viewModel: SubCategoryViewModel = viewModel(factory = SavedStateViewModelFactory(repository))
     val subCategories by viewModel.subCategories.collectAsState()
 
     Scaffold(
@@ -51,14 +44,14 @@ fun SubCategoryScreen(
     ) { padding ->
         LazyColumn(modifier = Modifier.padding(padding).padding(horizontal = 8.dp)) {
             items(subCategories) { subCategory ->
-                SubCategoryItem(subCategory = subCategory, onClick = { onSubCategoryClick(subCategory.subCategoryId) })
+                SubCategoryItem(subCategory = subCategory, onClick = { onSubCategoryClick(subCategory.id) })
             }
         }
     }
 }
 
 @Composable
-fun SubCategoryItem(subCategory: SubCategoryEntity, onClick: () -> Unit) {
+fun SubCategoryItem(subCategory: SubCategory, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -67,7 +60,7 @@ fun SubCategoryItem(subCategory: SubCategoryEntity, onClick: () -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Text(
-            text = subCategory.subCategoryName,
+            text = subCategory.name,
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(16.dp)
         )
