@@ -12,12 +12,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalSavedStateRegistryOwner
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
-import bankwiser.bankpromotion.material.data.local.entity.NoteEntity
+import bankwiser.bankpromotion.material.data.model.Note
 import bankwiser.bankpromotion.material.ui.viewmodel.NoteListViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.SavedStateViewModelFactory
 
@@ -28,14 +27,8 @@ fun NoteListScreen(
     onNavigateUp: () -> Unit
 ) {
     val context = LocalContext.current
-    // Correctly get the singleton repository instance from the Application class
     val repository = (context.applicationContext as BankWiserApplication).contentRepository
-    val viewModel: NoteListViewModel = viewModel(
-        factory = SavedStateViewModelFactory(
-            owner = LocalSavedStateRegistryOwner.current,
-            repository = repository
-        )
-    )
+    val viewModel: NoteListViewModel = viewModel(factory = SavedStateViewModelFactory(repository))
     val notes by viewModel.notes.collectAsState()
 
     Scaffold(
@@ -52,18 +45,14 @@ fun NoteListScreen(
     ) { padding ->
         LazyColumn(modifier = Modifier.padding(padding).padding(horizontal = 8.dp)) {
             items(notes) { note ->
-                // Notes with null subCategoryId will be filtered out by the SQL query,
-                // but we add a safe guard here for robustness.
-                if (note.subCategoryId != null) {
-                    NoteItem(note = note, onClick = { onNoteClick(note.noteId) })
-                }
+                NoteItem(note = note, onClick = { onNoteClick(note.id) })
             }
         }
     }
 }
 
 @Composable
-fun NoteItem(note: NoteEntity, onClick: () -> Unit) {
+fun NoteItem(note: Note, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
