@@ -5,12 +5,12 @@ plugins {
     id("com.google.gms.google-services")
 }
 
-// Read signing properties from environment variables
-val keystoreBase64 = System.getenv("SIGNING_KEYSTORE_BASE64")
+// Read signing properties from environment variables, now including a file path
+val keystorePath = System.getenv("SIGNING_KEYSTORE_PATH")
 val keystorePassword = System.getenv("SIGNING_KEYSTORE_PASSWORD")
 val keyAlias = System.getenv("SIGNING_KEY_ALIAS")
 val keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
-val useRemoteSigning = keystoreBase64 != null && keystorePassword != null && keyAlias != null && keyPassword != null
+val useRemoteSigning = keystorePath != null && keystorePassword != null && keyAlias != null && keyPassword != null
 
 android {
     namespace = "bankwiser.bankpromotion.material"
@@ -18,14 +18,15 @@ android {
     if (useRemoteSigning) {
         signingConfigs {
             create("release") {
-                val keystoreFile = project.rootProject.file("release.jks")
-                // THIS IS THE CORRECTED LINE: Using the fully qualified name
-                keystoreFile.writeBytes(java.util.Base64.getDecoder().decode(keystoreBase64))
-
-                storeFile = keystoreFile
-                this.storePassword = keystorePassword
-                this.keyAlias = keyAlias
-                this.keyPassword = keyPassword
+                val keystoreFile = project.file(keystorePath)
+                if (keystoreFile.exists()) {
+                    storeFile = keystoreFile
+                    this.storePassword = keystorePassword
+                    this.keyAlias = keyAlias
+                    this.keyPassword = keyPassword
+                } else {
+                    println("WARNING: Keystore file not found at path: $keystorePath")
+                }
             }
         }
     }
@@ -84,7 +85,7 @@ dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.05.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui.ui-tooling-preview")
+    implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
