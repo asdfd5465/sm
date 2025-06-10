@@ -19,7 +19,6 @@ import bankwiser.bankpromotion.material.ui.navigation.AppNavigation
 import bankwiser.bankpromotion.material.ui.theme.BankWiserProTheme
 import bankwiser.bankpromotion.material.ui.viewmodel.AuthViewModel
 import com.google.android.gms.auth.api.identity.Identity
-import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -42,7 +41,6 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     val authViewModel: AuthViewModel = viewModel()
 
-                    // Google Sign In launcher
                     val launcher = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.StartIntentSenderForResult(),
                         onResult = { result ->
@@ -57,7 +55,6 @@ class MainActivity : ComponentActivity() {
                         }
                     )
 
-                    // Error message display
                     LaunchedEffect(key1 = authViewModel.authState.value.error) {
                         authViewModel.authState.value.error?.let { error ->
                             Toast.makeText(applicationContext, error, Toast.LENGTH_LONG).show()
@@ -70,9 +67,18 @@ class MainActivity : ComponentActivity() {
                         onSignInClick = {
                             lifecycleScope.launch {
                                 val signInIntentSender = googleAuthUiClient.signIn()
+                                if (signInIntentSender == null) {
+                                    // THIS IS THE NEW ERROR FEEDBACK
+                                    Toast.makeText(
+                                        applicationContext,
+                                        "Could not start sign-in. Check configuration.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    return@launch
+                                }
                                 launcher.launch(
                                     IntentSenderRequest.Builder(
-                                        signInIntentSender ?: return@launch
+                                        signInIntentSender
                                     ).build()
                                 )
                             }
