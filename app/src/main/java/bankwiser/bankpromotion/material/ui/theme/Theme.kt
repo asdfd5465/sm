@@ -7,33 +7,32 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryBlue,
-    secondary = GradientEnd,
-    tertiary = PrimaryDark,
+    primary = PrimaryIndigo,
+    secondary = GradientEndPurple,
+    tertiary = PrimaryIndigoDark,
     background = Color(0xFF1A202C),
-    surface = Color(0xFF2D3748),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
+    surface = TextPrimary,
+    onPrimary = TextOnPrimary,
+    onSecondary = TextOnPrimary,
+    onTertiary = TextOnPrimary,
     onBackground = BackgroundLight,
     onSurface = BackgroundLight,
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = PrimaryBlue,
-    secondary = GradientEnd,
-    tertiary = PrimaryDark,
+    primary = PrimaryIndigo,
+    secondary = GradientEndPurple,
+    tertiary = PrimaryIndigoDark,
     background = BackgroundLight,
-    surface = Color.White,
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
+    surface = SurfaceLight,
+    onPrimary = TextOnPrimary,
+    onSecondary = TextOnPrimary,
+    onTertiary = TextOnPrimary,
     onBackground = TextPrimary,
     onSurface = TextPrimary,
 )
@@ -52,7 +51,7 @@ fun BankWiserProTheme(
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
         }
     }
 
