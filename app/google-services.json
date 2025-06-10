@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "495314399250",
+    "project_id": "bankwiser-bank-promotion",
+    "storage_bucket": "bankwiser-bank-promotion.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:495314399250:android:e0b1b31d885172bbc368cb",
+        "android_client_info": {
+          "package_name": "bankwiser.bankpromotion.material"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDeFpeCFzRugkv6XOfxFT1ZLHE__VEdt5o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
