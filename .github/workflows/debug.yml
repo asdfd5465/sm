@@ -71,14 +71,23 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      # NEW STEP: This decodes the Base64 secret and creates the keystore file
+      # that the Gradle script will be looking for.
+      - name: Decode Keystore
+        if: secrets.SIGNING_KEYSTORE_BASE64 != ''
+        run: |
+          echo "Decoding keystore from secret..."
+          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > bankwiser-debug-key.jks
+          echo "Keystore decoded to bankwiser-debug-key.jks"
+
+      # MODIFIED STEP: The environment variables passed to Gradle are changed.
       - name: Build Debug APK
         run: |
           echo "Starting Debug Build..."
           ./gradlew clean assembleDebug
         env:
-          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }} 
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
-          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          # We now pass the file path to Gradle instead of the raw Base64 content.
+          SIGNING_KEYSTORE_PATH: "bankwiser-debug-key.jks"
           SIGNING_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
