@@ -3,18 +3,29 @@ package bankwiser.bankpromotion.material.ui.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import bankwiser.bankpromotion.material.data.local.entity.NoteEntity
+import bankwiser.bankpromotion.material.data.model.Note
 import bankwiser.bankpromotion.material.data.repository.ContentRepository
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-class NoteDetailViewModel(private val repository: ContentRepository, private val savedStateHandle: SavedStateHandle) : ViewModel() {
-    private val noteId: StateFlow<String> = savedStateHandle.getStateFlow("noteId", "")
+class NoteDetailViewModel(private val repository: ContentRepository, savedStateHandle: SavedStateHandle) : ViewModel() {
+    private val noteId: String = savedStateHandle.get<String>("noteId")!!
 
-    val note: StateFlow<NoteEntity?> = noteId.flatMapLatest { id ->
-        repository.getNote(id)
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = null
-    )
+    private val _note = MutableStateFlow<Note?>(null)
+    val note: StateFlow<Note?> = _note
+
+    init {
+        loadNote()
+    }
+
+    private fun loadNote() {
+        viewModelScope.launch {
+            _note.value = withContext(Dispatchers.IO) {
+                repository.getNote(noteId)
+            }
+        }
+    }
 }
