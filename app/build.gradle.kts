@@ -1,4 +1,3 @@
-import java.util.Base64
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -20,8 +19,9 @@ android {
         signingConfigs {
             create("release") {
                 val keystoreFile = project.rootProject.file("release.jks")
+                // THIS IS THE CORRECTED LINE: Using the fully qualified name
                 keystoreFile.writeBytes(java.util.Base64.getDecoder().decode(keystoreBase64))
-                
+
                 storeFile = keystoreFile
                 this.storePassword = keystorePassword
                 this.keyAlias = keyAlias
@@ -84,7 +84,7 @@ dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.05.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.ui.ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
