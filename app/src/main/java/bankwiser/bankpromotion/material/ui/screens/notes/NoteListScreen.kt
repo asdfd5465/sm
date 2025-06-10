@@ -28,6 +28,7 @@ fun NoteListScreen(
     onNavigateUp: () -> Unit
 ) {
     val context = LocalContext.current
+    // Correctly get the singleton repository instance from the Application class
     val repository = (context.applicationContext as BankWiserApplication).contentRepository
     val viewModel: NoteListViewModel = viewModel(
         factory = SavedStateViewModelFactory(
@@ -51,7 +52,11 @@ fun NoteListScreen(
     ) { padding ->
         LazyColumn(modifier = Modifier.padding(padding).padding(horizontal = 8.dp)) {
             items(notes) { note ->
-                NoteItem(note = note, onClick = { onNoteClick(note.noteId) })
+                // Notes with null subCategoryId will be filtered out by the SQL query,
+                // but we add a safe guard here for robustness.
+                if (note.subCategoryId != null) {
+                    NoteItem(note = note, onClick = { onNoteClick(note.noteId) })
+                }
             }
         }
     }
@@ -68,12 +73,12 @@ fun NoteItem(note: NoteEntity, onClick: () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = note.title ?: "No Title",
+                text = note.title,
                 style = MaterialTheme.typography.titleMedium
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = note.body ?: "",
+                text = note.body,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
