@@ -12,7 +12,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalSavedStateRegistryOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
@@ -25,14 +24,8 @@ fun NoteReaderScreen(
     onNavigateUp: () -> Unit
 ) {
     val context = LocalContext.current
-    // Correctly get the singleton repository instance from the Application class
     val repository = (context.applicationContext as BankWiserApplication).contentRepository
-    val viewModel: NoteDetailViewModel = viewModel(
-        factory = SavedStateViewModelFactory(
-            owner = LocalSavedStateRegistryOwner.current,
-            repository = repository
-        )
-    )
+    val viewModel: NoteDetailViewModel = viewModel(factory = SavedStateViewModelFactory(repository))
     val note by viewModel.note.collectAsState()
 
     Scaffold(
