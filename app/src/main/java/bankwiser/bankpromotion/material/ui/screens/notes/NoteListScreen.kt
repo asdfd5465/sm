@@ -18,8 +18,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.data.model.Note
-import bankwiser.bankpromotion.material.ui.theme.TextPrimary
-import bankwiser.bankpromotion.material.ui.theme.TextSecondary
 import bankwiser.bankpromotion.material.ui.viewmodel.NoteListViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.SavedStateViewModelFactory
 
@@ -37,7 +35,7 @@ fun NoteListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Notes") }, // Later this can show Topic Name
+                title = { Text("Notes") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -77,17 +75,17 @@ fun NoteItemCard(note: Note, onClick: () -> Unit) {
                 text = note.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = TextPrimary,
                 lineHeight = MaterialTheme.typography.titleMedium.lineHeight * 1.4
+                // 'color' parameter removed
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = note.body,
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
                 lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.5
+                // 'color' parameter removed
             )
         }
     }
