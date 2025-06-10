@@ -52,8 +52,8 @@ jobs:
         run: chmod +x ./gradlew
       
       - name: Decode Keystore
-        # THIS IS THE CORRECTED 'if' CONDITION SYNTAX
-        if: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' }}
+        # THIS IS THE CORRECTED LINE - NO ${{...}} WRAPPER
+        if: secrets.SIGNING_KEYSTORE_BASE64 != ''
         run: |
           echo "Decoding keystore..."
           echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > bankwiser-debug-key.jks
@@ -62,7 +62,6 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew assembleDebug
         env:
-          # Pass the path to the decoded keystore file
           SIGNING_KEYSTORE_PATH: "bankwiser-debug-key.jks"
           SIGNING_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
