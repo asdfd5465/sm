@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.data.local.entity.SubCategoryEntity
-import bankwiser.bankpromotion.material.data.repository.ContentRepository
 import bankwiser.bankpromotion.material.ui.viewmodel.SavedStateViewModelFactory
 import bankwiser.bankpromotion.material.ui.viewmodel.SubCategoryViewModel
 
@@ -28,8 +27,8 @@ fun SubCategoryScreen(
     onNavigateUp: () -> Unit
 ) {
     val context = LocalContext.current
-    val database = (context.applicationContext as BankWiserApplication).contentDatabase
-    val repository = ContentRepository(database)
+    // Correctly get the singleton repository instance from the Application class
+    val repository = (context.applicationContext as BankWiserApplication).contentRepository
     val viewModel: SubCategoryViewModel = viewModel(
         factory = SavedStateViewModelFactory(
             owner = LocalSavedStateRegistryOwner.current,
