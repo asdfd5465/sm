@@ -5,7 +5,7 @@ plugins {
     id("com.google.gms.google-services")
 }
 
-// Read signing properties from environment variables, now including a file path
+// Read signing properties from environment variables
 val keystorePath = System.getenv("SIGNING_KEYSTORE_PATH")
 val keystorePassword = System.getenv("SIGNING_KEYSTORE_PASSWORD")
 val keyAlias = System.getenv("SIGNING_KEY_ALIAS")
@@ -14,6 +14,7 @@ val useRemoteSigning = keystorePath != null && keystorePassword != null && keyAl
 
 android {
     namespace = "bankwiser.bankpromotion.material"
+    compileSdk = 34 // THIS LINE WAS MISSING. IT IS NOW CORRECT.
 
     if (useRemoteSigning) {
         signingConfigs {
