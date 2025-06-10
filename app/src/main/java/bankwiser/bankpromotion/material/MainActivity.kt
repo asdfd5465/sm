@@ -1,6 +1,7 @@
 package bankwiser.bankpromotion.material
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -66,15 +67,18 @@ class MainActivity : ComponentActivity() {
                         authViewModel = authViewModel,
                         onSignInClick = {
                             lifecycleScope.launch {
-                                // We now read the string resource directly here and pass it
                                 val serverClientId = getString(R.string.default_web_client_id)
+                                // Add a log to prove the ID is being read
+                                Log.d("AUTH_DEBUG", "Attempting sign-in with client ID: $serverClientId")
+
                                 val signInIntentSender = googleAuthUiClient.signIn(serverClientId)
 
                                 if (signInIntentSender == null) {
+                                    Log.e("AUTH_DEBUG", "signInIntentSender is null. Check SHA-1 and Client ID in Firebase.")
                                     Toast.makeText(
                                         applicationContext,
                                         "Could not start sign-in. Check Web Client ID.",
-                                        Toast.LENGTH_SHORT
+                                        Toast.LENGTH_LONG
                                     ).show()
                                     return@launch
                                 }
