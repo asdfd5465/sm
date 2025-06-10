@@ -26,6 +26,8 @@ abstract class ContentDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: ContentDatabase? = null
         private const val DATABASE_NAME = "content.db"
+        // This is the asset file that will be copied.
+        private const val ASSET_DB_PATH = "database/content_v1.db"
 
         fun getDatabase(context: Context): ContentDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -34,6 +36,8 @@ abstract class ContentDatabase : RoomDatabase() {
                     ContentDatabase::class.java,
                     DATABASE_NAME
                 )
+                // This now works because the asset DB has a valid schema.
+                .createFromAsset(ASSET_DB_PATH)
                 .build()
 
                 INSTANCE = instance
