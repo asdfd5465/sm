@@ -7,7 +7,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "SubCategories",
+    tableName = "subcategories",
     foreignKeys = [ForeignKey(
         entity = CategoryEntity::class,
         parentColumns = ["category_id"],
@@ -19,5 +19,5 @@ import androidx.room.PrimaryKey
 data class SubCategoryEntity(
     @PrimaryKey @ColumnInfo(name = "sub_category_id") val subCategoryId: String,
     @ColumnInfo(name = "category_id") val categoryId: String,
-    @ColumnInfo(name = "sub_category_name") val subCategoryName: String?
+    @ColumnInfo(name = "sub_category_name") val subCategoryName: String
 )
