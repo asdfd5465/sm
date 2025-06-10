@@ -80,7 +80,7 @@ fun CategoryCard(category: Category, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = MaterialTheme.shapes.large // Rounded corners
+        shape = MaterialTheme.shapes.large
     ) {
         Row(
             modifier = Modifier.padding(18.dp),
@@ -95,21 +95,20 @@ fun CategoryCard(category: Category, onClick: () -> Unit) {
                 Text(
                     text = category.name,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
+                    fontWeight = FontWeight.SemiBold
+                    // The 'color' parameter is removed to let the theme apply the correct onSurface color
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Notes, MCQs, & More", // Placeholder meta text
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    text = "Notes, MCQs, & More",
+                    style = MaterialTheme.typography.bodySmall
+                    // The 'color' parameter is removed
                 )
             }
         }
     }
 }
 
-// Helper to provide icons as seen in the mockup
 fun getIconForCategory(id: String): String {
     return when {
         id.contains("RBI") -> "🏦"
