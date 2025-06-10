@@ -25,7 +25,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import bankwiser.bankpromotion.material.ui.theme.BankWiserProTheme
-import bankwiser.bankpromotion.material.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 
 data class OnboardingPage(
@@ -74,7 +73,8 @@ fun OnboardingScreen(onGetStarted: () -> Unit) {
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (isLastPage) "Login with Google" else "Next")
+                // The text is now consistent, the action changes
+                Text(if (isLastPage) "Create Account / Login" else "Next")
             }
 
             if (!isLastPage) {
@@ -84,10 +84,10 @@ fun OnboardingScreen(onGetStarted: () -> Unit) {
                         .fillMaxWidth()
                         .padding(top = 8.dp)
                 ) {
-                    Text("Skip")
+                    Text("Skip to Login")
                 }
             } else {
-                Spacer(modifier = Modifier.height(48.dp)) // To keep button position consistent
+                Spacer(modifier = Modifier.height(48.dp))
             }
         }
     }
@@ -113,7 +113,7 @@ fun OnboardingPageContent(page: OnboardingPage) {
             text = page.description,
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
-            color = TextSecondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
