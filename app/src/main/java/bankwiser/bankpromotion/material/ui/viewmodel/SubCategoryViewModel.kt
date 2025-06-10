@@ -3,21 +3,29 @@ package bankwiser.bankpromotion.material.ui.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import bankwiser.bankpromotion.material.data.local.entity.SubCategoryEntity
+import bankwiser.bankpromotion.material.data.model.SubCategory
 import bankwiser.bankpromotion.material.data.repository.ContentRepository
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-class SubCategoryViewModel(private val repository: ContentRepository, private val savedStateHandle: SavedStateHandle) : ViewModel() {
-    private val categoryId: StateFlow<String> = savedStateHandle.getStateFlow("categoryId", "")
+class SubCategoryViewModel(private val repository: ContentRepository, savedStateHandle: SavedStateHandle) : ViewModel() {
+    private val categoryId: String = savedStateHandle.get<String>("categoryId")!!
+    
+    private val _subCategories = MutableStateFlow<List<SubCategory>>(emptyList())
+    val subCategories: StateFlow<List<SubCategory>> = _subCategories
 
-    val subCategories: StateFlow<List<SubCategoryEntity>> = categoryId.flatMapLatest { id ->
-        repository.getSubCategories(id)
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
+    init {
+        loadSubCategories()
+    }
+    
+    private fun loadSubCategories() {
+        viewModelScope.launch {
+            _subCategories.value = withContext(Dispatchers.IO) {
+                repository.getSubCategories(categoryId)
+            }
+        }
+    }
 }
