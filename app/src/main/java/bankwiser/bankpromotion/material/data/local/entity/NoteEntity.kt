@@ -8,8 +8,10 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "notes")
 data class NoteEntity(
     @PrimaryKey @ColumnInfo(name = "note_id") val noteId: String,
+    // Corrected: Changed from String? to String
     @ColumnInfo(name = "title") val title: String,
+    // Corrected: Changed from String? to String
     @ColumnInfo(name = "body") val body: String,
-    // sub_category_id can be null in your new schema
+    // This remains nullable as it is in your DB schema
     @ColumnInfo(name = "sub_category_id") val subCategoryId: String?
 )
