@@ -26,7 +26,7 @@ fun NoteReaderScreen(
     onNavigateUp: () -> Unit
 ) {
     val context = LocalContext.current
-    val repository = (context.applicationContext as BankWiserApplication).contentRepository
+    val repository = (context.applicationCtxt as BankWiserApplication).contentRepository
     val viewModel: NoteDetailViewModel = viewModel(factory = SavedStateViewModelFactory(repository))
     val note by viewModel.note.collectAsState()
 
@@ -62,11 +62,11 @@ fun NoteReaderScreen(
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
-                    Divider(modifier = Modifier.padding(vertical = 16.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                     Text(
                         text = it.body,
                         style = MaterialTheme.typography.bodyLarge,
-                        lineHeight = 28.sp // Improved readability as per mockup
+                        lineHeight = 28.sp
                     )
                 }
             } ?: run {
