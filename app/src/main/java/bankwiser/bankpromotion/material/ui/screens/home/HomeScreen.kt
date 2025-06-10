@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.data.local.entity.CategoryEntity
+import bankwiser.bankpromotion.material.data.repository.ContentRepository
 import bankwiser.bankpromotion.material.ui.theme.BankWiserProTheme
 import bankwiser.bankpromotion.material.ui.viewmodel.HomeViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
@@ -23,8 +24,8 @@ import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
 @Composable
 fun HomeScreen(onCategoryClick: (categoryId: String) -> Unit) {
     val context = LocalContext.current
-    val repository = (context.applicationContext as BankWiserApplication).contentRepository
-    // This call now matches the corrected ViewModelFactory constructor
+    val database = (context.applicationContext as BankWiserApplication).contentDatabase
+    val repository = ContentRepository(database)
     val viewModel: HomeViewModel = viewModel(factory = ViewModelFactory(repository))
     val categories by viewModel.categories.collectAsState()
 
@@ -53,7 +54,7 @@ fun CategoryItem(category: CategoryEntity, onClick: () -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Text(
-            text = category.categoryName ?: "Unnamed Category",
+            text = category.categoryName,
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(16.dp)
         )
