@@ -1,8 +1,9 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    // ksp is no longer needed for this, but keep it for future phases
     id("com.google.devtools.ksp")
+    // Add the Google Services plugin
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -64,4 +65,9 @@ dependencies {
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
+
+    // Firebase & Google Auth
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
 }
