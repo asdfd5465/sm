@@ -47,9 +47,13 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
       
+      # THIS IS THE NEW, CORRECTED STEP
       - name: Decode Keystore
-        # THIS IS THE CORRECTED LINE - NO ${{...}} WRAPPER
-        if: secrets.SIGNING_KEYSTORE_BASE64 != ''
+        # We first set an environment variable based on the secret's presence.
+        env:
+          KEYSTORE_IS_PRESENT: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' }}
+        # Then, we use the 'if' condition on the environment variable, which is a guaranteed-to-work pattern.
+        if: env.KEYSTORE_IS_PRESENT == 'true'
         run: |
           echo "Decoding keystore..."
           echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > bankwiser-debug-key.jks
