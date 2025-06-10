@@ -1,5 +1,3 @@
-import java.util.Base64 // THIS IS THE FIX
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -7,26 +5,24 @@ plugins {
     id("com.google.gms.google-services")
 }
 
-// Read signing properties from environment variables or gradle.properties
+// Read signing properties from environment variables
 val keystoreBase64 = System.getenv("SIGNING_KEYSTORE_BASE64")
 val keystorePassword = System.getenv("SIGNING_KEYSTORE_PASSWORD")
 val keyAlias = System.getenv("SIGNING_KEY_ALIAS")
 val keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+val useRemoteSigning = keystoreBase64 != null && keystorePassword != null && keyAlias != null && keyPassword != null
 
 android {
     namespace = "bankwiser.bankpromotion.material"
-    compileSdk = 34
 
-    // This block configures signing for ALL build types
-    signingConfigs {
-        create("release") {
-            if (keystoreBase64 != null) {
-                // Decode the Base64 keystore from environment variable
+    if (useRemoteSigning) {
+        signingConfigs {
+            create("release") {
                 val keystoreFile = project.rootProject.file("release.jks")
-                keystoreFile.writeBytes(Base64.getDecoder().decode(keystoreBase64))
-
+                keystoreFile.writeBytes(java.util.Base64.getDecoder().decode(keystoreBase64))
+                
                 storeFile = keystoreFile
-                storePassword = keystorePassword
+                this.storePassword = keystorePassword
                 this.keyAlias = keyAlias
                 this.keyPassword = keyPassword
             }
@@ -44,12 +40,15 @@ android {
 
     buildTypes {
         debug {
-            // Use the same signing config for debug builds
-            signingConfig = signingConfigs.getByName("release")
+            if (useRemoteSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = false
         }
         release {
-            signingConfig = signingConfigs.getByName("release")
+            if (useRemoteSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -75,7 +74,6 @@ android {
 }
 
 dependencies {
-    // ... your other dependencies remain the same
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
@@ -89,7 +87,12 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
+
+    // Firebase & Google Auth
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.android.gms:play-services-auth:21.2.0")
+    // New dependency for modern Credentials API
+    implementation("androidx.credentials:credentials:1.2.2")
+    implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
 }
