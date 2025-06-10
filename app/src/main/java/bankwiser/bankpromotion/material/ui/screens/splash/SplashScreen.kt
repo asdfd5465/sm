@@ -16,8 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import bankwiser.bankpromotion.material.ui.theme.BankWiserProTheme
-import bankwiser.bankpromotion.material.ui.theme.GradientEnd
-import bankwiser.bankpromotion.material.ui.theme.PrimaryBlue
+import bankwiser.bankpromotion.material.ui.theme.GradientEndPurple
+import bankwiser.bankpromotion.material.ui.theme.PrimaryIndigo
 import kotlinx.coroutines.delay
 
 @Composable
@@ -32,7 +32,7 @@ fun SplashScreen(onTimeout: () -> Unit) {
             .fillMaxSize()
             .background(
                 brush = Brush.verticalGradient(
-                    colors = listOf(PrimaryBlue, GradientEnd)
+                    colors = listOf(PrimaryIndigo, GradientEndPurple)
                 )
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
