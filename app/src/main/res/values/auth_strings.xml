@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 
+      IMPORTANT: REPLACE the value below with the "client_id" where "client_type" is 3 
+      from your google-services.json file.
+    -->
+    <string name="default_web_client_id" translatable="false">495314399250-vaigkc1c7nkrgr0d231rpvgupmbtnrrr.apps.googleusercontent.com</string>
+</resources>
