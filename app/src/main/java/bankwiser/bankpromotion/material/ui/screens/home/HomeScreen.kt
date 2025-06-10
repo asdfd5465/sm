@@ -14,7 +14,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
-import bankwiser.bankpromotion.material.data.local.entity.CategoryEntity
+import bankwiser.bankpromotion.material.data.model.Category
 import bankwiser.bankpromotion.material.ui.theme.BankWiserProTheme
 import bankwiser.bankpromotion.material.ui.viewmodel.HomeViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
@@ -23,7 +23,6 @@ import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
 @Composable
 fun HomeScreen(onCategoryClick: (categoryId: String) -> Unit) {
     val context = LocalContext.current
-    // Correctly get the singleton repository instance from the Application class
     val repository = (context.applicationContext as BankWiserApplication).contentRepository
     val viewModel: HomeViewModel = viewModel(factory = ViewModelFactory(repository))
     val categories by viewModel.categories.collectAsState()
@@ -37,14 +36,14 @@ fun HomeScreen(onCategoryClick: (categoryId: String) -> Unit) {
     ) { padding ->
         LazyColumn(modifier = Modifier.padding(padding).padding(horizontal = 8.dp)) {
             items(categories) { category ->
-                CategoryItem(category = category, onClick = { onCategoryClick(category.categoryId) })
+                CategoryItem(category = category, onClick = { onCategoryClick(category.id) })
             }
         }
     }
 }
 
 @Composable
-fun CategoryItem(category: CategoryEntity, onClick: () -> Unit) {
+fun CategoryItem(category: Category, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -53,7 +52,7 @@ fun CategoryItem(category: CategoryEntity, onClick: () -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Text(
-            text = category.categoryName,
+            text = category.name,
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(16.dp)
         )
