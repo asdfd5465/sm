@@ -27,14 +27,15 @@ class GoogleAuthUiClient(
 ) {
     private val auth = FirebaseAuth.getInstance()
 
-    suspend fun signIn(): IntentSender? {
+    // The serverClientId is now passed directly to this function
+    suspend fun signIn(serverClientId: String): IntentSender? {
         val result = try {
             oneTapClient.beginSignIn(
-                buildSignInRequest()
+                buildSignInRequest(serverClientId)
             ).await()
-        } catch(e: Exception) {
+        } catch (e: Exception) {
             e.printStackTrace()
-            if(e is CancellationException) throw e
+            if (e is CancellationException) throw e
             null
         }
         return result?.pendingIntent?.intentSender
@@ -43,13 +44,13 @@ class GoogleAuthUiClient(
     suspend fun signInWithIntent(intent: Intent): SignInResult {
         val credential = oneTapClient.getSignInCredentialFromIntent(intent)
         val idToken = credential.googleIdToken
-        if(idToken == null) {
+        if (idToken == null) {
             return SignInResult(
                 data = null,
                 errorMessage = "No ID token!"
             )
         }
-        
+
         return SignInResult(
             data = UserData(
                 userId = credential.id,
@@ -65,19 +66,19 @@ class GoogleAuthUiClient(
         try {
             auth.signOut()
             oneTapClient.signOut().await()
-        } catch(e: Exception) {
+        } catch (e: Exception) {
             e.printStackTrace()
-            if(e is CancellationException) throw e
+            if (e is CancellationException) throw e
         }
     }
 
-    private fun buildSignInRequest(): BeginSignInRequest {
+    // The serverClientId is now required by this function
+    private fun buildSignInRequest(serverClientId: String): BeginSignInRequest {
         return BeginSignInRequest.builder()
             .setGoogleIdTokenRequestOptions(
                 BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
                     .setSupported(true)
-                    // Your server client ID, which you can get from your Firebase project settings
-                    .setServerClientId(context.getString(R.string.default_web_client_id))
+                    .setServerClientId(serverClientId) // Use the direct string value
                     .setFilterByAuthorizedAccounts(false)
                     .build()
             )
