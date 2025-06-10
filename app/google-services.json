@@ -12,7 +12,20 @@
           "package_name": "bankwiser.bankpromotion.material"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "495314399250-m9gsffqnm7cc7g38segl3g9d0qcaoll5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "bankwiser.bankpromotion.material",
+            "certificate_hash": "f9e3cc29cbb2334a1c32369e88e25a47680695b6"
+          }
+        },
+        {
+          "client_id": "495314399250-vaigkc1c7nkrgr0d231rpvgupmbtnrrr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDeFpeCFzRugkv6XOfxFT1ZLHE__VEdt5o"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "495314399250-vaigkc1c7nkrgr0d231rpvgupmbtnrrr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
