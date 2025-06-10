@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -25,14 +27,17 @@ import bankwiser.bankpromotion.material.ui.viewmodel.HomeViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
 
 @Composable
-fun HomeScreen(onCategoryClick: (categoryId: String) -> Unit) {
+fun HomeScreen(
+    onCategoryClick: (categoryId: String) -> Unit,
+    onSignOutClick: () -> Unit
+) {
     val context = LocalContext.current
     val repository = (context.applicationContext as BankWiserApplication).contentRepository
     val viewModel: HomeViewModel = viewModel(factory = ViewModelFactory(repository))
     val categories by viewModel.categories.collectAsState()
 
     Scaffold(
-        topBar = { HomeHeader() }
+        topBar = { HomeHeader(onSignOutClick = onSignOutClick) }
     ) { padding ->
         LazyColumn(
             modifier = Modifier.padding(padding),
@@ -47,7 +52,7 @@ fun HomeScreen(onCategoryClick: (categoryId: String) -> Unit) {
 }
 
 @Composable
-fun HomeHeader() {
+fun HomeHeader(onSignOutClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -56,19 +61,33 @@ fun HomeHeader() {
                     colors = listOf(PrimaryIndigo, GradientEndPurple)
                 )
             )
-            .padding(20.dp)
     ) {
-        Text(
-            text = "Welcome back! 👋",
-            style = MaterialTheme.typography.titleLarge,
-            color = TextOnPrimary,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "Ready to ace your promotion?",
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextOnPrimary.copy(alpha = 0.9f)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Welcome back! 👋",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = TextOnPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Ready to ace your promotion?",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextOnPrimary.copy(alpha = 0.9f)
+                )
+            }
+            IconButton(onClick = onSignOutClick) {
+                Icon(
+                    imageVector = Icons.Default.ExitToApp,
+                    contentDescription = "Sign Out",
+                    tint = TextOnPrimary
+                )
+            }
+        }
     }
 }
 
@@ -96,13 +115,11 @@ fun CategoryCard(category: Category, onClick: () -> Unit) {
                     text = category.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
-                    // The 'color' parameter is removed to let the theme apply the correct onSurface color
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Notes, MCQs, & More",
                     style = MaterialTheme.typography.bodySmall
-                    // The 'color' parameter is removed
                 )
             }
         }
@@ -123,6 +140,6 @@ fun getIconForCategory(id: String): String {
 @Composable
 fun HomeScreenPreview() {
     BankWiserProTheme {
-        HomeScreen(onCategoryClick = {})
+        HomeScreen(onCategoryClick = {}, onSignOutClick = {})
     }
 }
