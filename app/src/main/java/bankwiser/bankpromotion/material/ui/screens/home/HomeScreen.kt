@@ -15,7 +15,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.data.local.entity.CategoryEntity
-import bankwiser.bankpromotion.material.data.repository.ContentRepository
 import bankwiser.bankpromotion.material.ui.theme.BankWiserProTheme
 import bankwiser.bankpromotion.material.ui.viewmodel.HomeViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
@@ -24,8 +23,8 @@ import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
 @Composable
 fun HomeScreen(onCategoryClick: (categoryId: String) -> Unit) {
     val context = LocalContext.current
-    val database = (context.applicationContext as BankWiserApplication).contentDatabase
-    val repository = ContentRepository(database)
+    // Correctly get the singleton repository instance from the Application class
+    val repository = (context.applicationContext as BankWiserApplication).contentRepository
     val viewModel: HomeViewModel = viewModel(factory = ViewModelFactory(repository))
     val categories by viewModel.categories.collectAsState()
 
