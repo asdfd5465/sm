@@ -4,14 +4,17 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-// Reflects the new DB schema for Phase 2
+// This entity now perfectly matches the 'notes' table in your DB file.
 @Entity(tableName = "notes")
 data class NoteEntity(
     @PrimaryKey @ColumnInfo(name = "note_id") val noteId: String,
-    // Corrected: Changed from String? to String
     @ColumnInfo(name = "title") val title: String,
-    // Corrected: Changed from String? to String
     @ColumnInfo(name = "body") val body: String,
-    // This remains nullable as it is in your DB schema
-    @ColumnInfo(name = "sub_category_id") val subCategoryId: String?
+    @ColumnInfo(name = "note_type") val noteType: String,
+    @ColumnInfo(name = "category_id") val categoryId: String,
+    @ColumnInfo(name = "sub_category_id") val subCategoryId: String?,
+    @ColumnInfo(name = "tag_id") val tagId: String?,
+    @ColumnInfo(name = "is_free_launch_content") val isFreeLaunchContent: Boolean,
+    @ColumnInfo(name = "is_premium") val isPremium: Boolean,
+    @ColumnInfo(name = "is_deleted") val isDeleted: Boolean
 )
