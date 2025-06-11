@@ -1,0 +1,79 @@
+name: Android Release Build
+
+on:
+  workflow_dispatch: # Allows manual triggering
+  # push:
+  #   branches: [ main ] # Trigger on push to main
+  #   tags:
+  #     - 'v*' # Trigger on version tags like v1.0, v1.0.1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Android SDK
+        # This step remains the same as your current excellent setup
+        run: |
+          echo "ANDROID_SDK_ROOT=${HOME}/android-sdk" >> $GITHUB_ENV
+          echo "ANDROID_HOME=${HOME}/android-sdk" >> $GITHUB_ENV
+          SDK_CMD_TOOLS_PATH="${HOME}/android-sdk/cmdline-tools/latest/bin"
+          SDK_PLATFORM_TOOLS_PATH="${HOME}/android-sdk/platform-tools"
+          SDK_EMULATOR_PATH="${HOME}/android-sdk/emulator"
+          echo "$SDK_CMD_TOOLS_PATH" >> $GITHUB_PATH
+          echo "$SDK_PLATFORM_TOOLS_PATH" >> $GITHUB_PATH
+          echo "$SDK_EMULATOR_PATH" >> $GITHUB_PATH
+          export PATH="$SDK_CMD_TOOLS_PATH:$SDK_PLATFORM_TOOLS_PATH:$SDK_EMULATOR_PATH:$PATH"
+          mkdir -p ${HOME}/android-sdk/cmdline-tools
+          CMDTOOLS_VERSION_ZIP="commandlinetools-linux-11076708_latest.zip"
+          wget --quiet "https://dl.google.com/android/repository/${CMDTOOLS_VERSION_ZIP}" -O cmdline-tools.zip
+          unzip -q cmdline-tools.zip -d ${HOME}/android-sdk/cmdline-tools
+          mv ${HOME}/android-sdk/cmdline-tools/cmdline-tools ${HOME}/android-sdk/cmdline-tools/latest
+          rm cmdline-tools.zip
+          yes | sdkmanager --licenses > /dev/null || true # Suppress output
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools" > /dev/null || true # Suppress output
+
+      - name: Setup Gradle Caching
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Decode Keystore
+        run: |
+          # The signingConfigs in build.gradle.kts expects the keystore here
+          mkdir -p ${{ github.workspace }}/app/build/signing
+          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/app/build/signing/first.keystore
+        # Only run this step if the secret is available
+        if: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' }}
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+        env:
+          SIGNING_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          # ANDROID_SDK_ROOT and ANDROID_HOME are set by the SDK setup step
+
+      - name: Upload Release APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error # Fail the workflow if APK is not found
