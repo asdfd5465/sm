@@ -48,18 +48,17 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      # --- START OF CORRECTED SIGNING LOGIC (BASED ON YOUR WORKING EXAMPLE) ---
       - name: Decode Keystore and Set Signing Environment
-        # This step only runs if the keystore secret exists
-        if: secrets.SIGNING_KEYSTORE_BASE64 != ''
+        # THIS IS THE CORRECTED LOGIC USING THE ROBUST PATTERN
+        env:
+          KEYSTORE_IS_PRESENT: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' }}
+        if: env.KEYSTORE_IS_PRESENT == 'true'
         run: |
           echo "Decoding keystore..."
-          # Define the path for the keystore file within the runner
           KEYSTORE_FILE_PATH="${{ github.workspace }}/bankwiser-debug-key.jks"
           echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > $KEYSTORE_FILE_PATH
           
           echo "Setting up signing environment variables for Gradle..."
-          # Export the variables to be used by all subsequent steps in this job
           echo "SIGNING_KEYSTORE_PATH=$KEYSTORE_FILE_PATH" >> $GITHUB_ENV
           echo "SIGNING_KEYSTORE_PASSWORD=${{ secrets.SIGNING_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
           echo "SIGNING_KEY_ALIAS=${{ secrets.SIGNING_KEY_ALIAS }}" >> $GITHUB_ENV
@@ -68,13 +67,10 @@ jobs:
           echo "Keystore decoded and signing variables exported."
       
       - name: Build and Sign Debug APK
-        # This step now automatically gets the env vars from the previous step
-        # No 'env:' block is needed here
         run: |
           echo "Starting Signed Debug Build..."
           ./gradlew clean assembleDebug
-      # --- END OF CORRECTED SIGNING LOGIC ---
-
+      
       - name: Upload Debug APK artifact
         uses: actions/upload-artifact@v4
         with:
