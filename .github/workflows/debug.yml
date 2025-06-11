@@ -57,7 +57,16 @@ jobs:
           sdkmanager --list_installed || echo "sdkmanager --list_installed failed"
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT || format('{0}/android-sdk', env.HOME) }}
-
+      
+      - name: Validate Secrets
+        run: |
+          if [ -z "${{ secrets.SIGNING_KEY_PASSWORD }}" ] || \
+          [ -z "${{ secrets.SIGNING_KEYSTORE_PASSWORD }}" ] || \
+           [ -z "${{ secrets.SIGNING_KEY_ALIAS }}" ] || \
+           [ -z "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" ]; then
+            echo "ERROR: One or more signing secrets are not set."
+            exit 1
+            fi    
       - name: Decode Keystore and Set Up Signing Variables
         run: |
           echo "Decoding keystore..."
@@ -91,10 +100,11 @@ jobs:
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-            - name: Build Signed Debug APK
+      
+      - name: Build Signed Debug APK
         run: |
           echo "Starting Debug Build..."
-          ./gradlew clean assembleDebug
+          ./gradlew clean assembleRelease
         env:
           # ANDROID_SDK_ROOT and ANDROID_HOME are already set in GITHUB_ENV
           # The MYAPP_... signing variables are also set in GITHUB_ENV from the previous step
