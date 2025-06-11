@@ -26,7 +26,7 @@ fun NoteReaderScreen(
     onNavigateUp: () -> Unit
 ) {
     val context = LocalContext.current
-    val repository = (context.applicationCtxt as BankWiserApplication).contentRepository
+    val repository = (context.applicationContext as BankWiserApplication).contentRepository
     val viewModel: NoteDetailViewModel = viewModel(factory = SavedStateViewModelFactory(repository))
     val note by viewModel.note.collectAsState()
 
