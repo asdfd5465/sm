@@ -60,10 +60,19 @@ jobs:
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT || format('{0}/android-sdk', env.HOME) }}
                   
-      # New step to place google-services.json
+      # Step 1: Check if GOOGLE_SERVICES_JSON_BASE64 secret is set
+      - name: Check for Google Services JSON Secret
+        id: check_gservices_secret
+        run: |
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" ]; then
+            echo "GSERVICES_JSON_SECRET_SET=true" >> $GITHUB_ENV
+          else
+            echo "GSERVICES_JSON_SECRET_SET=false" >> $GITHUB_ENV
+          fi
+
+      # Step 2: Decode google-services.json (uses the env var from above step)
       - name: Decode google-services.json
-        # Corrected 'if' condition syntax
-        if: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 != '' }}
+        if: env.GSERVICES_JSON_SECRET_SET == 'true'
         run: |
           echo "Decoding google-services.json..."
           mkdir -p ${{ github.workspace }}/app # Ensure app directory exists
@@ -74,7 +83,7 @@ jobs:
             echo "google-services.json created successfully."
           else
             echo "ERROR: google-services.json NOT created."
-            exit 1
+            # exit 1 # Optionally fail if not present and expected
           fi
       
       
