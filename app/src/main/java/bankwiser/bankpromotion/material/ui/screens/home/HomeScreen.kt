@@ -14,14 +14,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color // <<< IMPORT ADDED HERE
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
-import bankwiser.bankpromotion.material.R // Required for stringResource
+import bankwiser.bankpromotion.material.R
 import bankwiser.bankpromotion.material.auth.AuthViewModel
 import bankwiser.bankpromotion.material.data.model.Category
 import bankwiser.bankpromotion.material.ui.theme.*
@@ -29,21 +31,19 @@ import bankwiser.bankpromotion.material.ui.viewmodel.HomeViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import androidx.compose.ui.res.stringResource // Required for stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onCategoryClick: (categoryId: String) -> Unit,
-    onSignOut: () -> Unit, // Callback for sign out
-    authViewModel: AuthViewModel = viewModel() // Inject AuthViewModel
+    onSignOut: () -> Unit,
+    authViewModel: AuthViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val repository = (context.applicationContext as BankWiserApplication).contentRepository
     val homeViewModel: HomeViewModel = viewModel(factory = ViewModelFactory(repository))
     val categories by homeViewModel.categories.collectAsState()
 
-    // Configure Google Sign-In client for sign out
     val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
         .requestIdToken(stringResource(id = R.string.default_web_client_id))
         .requestEmail()
@@ -54,7 +54,7 @@ fun HomeScreen(
         topBar = {
             HomeHeader(onSignOutClick = {
                 authViewModel.signOut(googleSignInClient)
-                onSignOut() // Navigate after sign out logic is complete
+                onSignOut()
             })
         }
     ) { padding ->
@@ -72,7 +72,7 @@ fun HomeScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeHeader(onSignOutClick: () -> Unit) { // Added callback for sign out button
+fun HomeHeader(onSignOutClick: () -> Unit) {
     TopAppBar(
         title = {
             Column {
@@ -162,7 +162,6 @@ fun getIconForCategory(id: String): String {
 @Composable
 fun HomeScreenPreview() {
     BankWiserProTheme {
-        // Provide dummy callbacks for preview
         HomeScreen(onCategoryClick = {}, onSignOut = {})
     }
 }
