@@ -8,6 +8,36 @@ android {
     namespace = "bankwiser.bankpromotion.material"
     compileSdk = 34
 
+    // Retrieve signing information from environment variables
+    // These will be set by the GitHub Actions workflow
+    val storeFileFromEnv = System.getenv("SIGNING_KEYSTORE_FILE_PATH") // Custom name for the file path
+    val storePasswordFromEnv = System.getenv("SIGNING_KEYSTORE_PASSWORD_ENV") // Custom env var name
+    val keyAliasFromEnv = System.getenv("SIGNING_KEY_ALIAS_ENV")         // Custom env var name
+    val keyPasswordFromEnv = System.getenv("SIGNING_KEY_PASSWORD_ENV")     // Custom env var name
+
+    signingConfigs {
+        create("release") {
+            if (storeFileFromEnv?.isNotEmpty() == true &&
+                storePasswordFromEnv?.isNotEmpty() == true &&
+                keyAliasFromEnv?.isNotEmpty() == true &&
+                keyPasswordFromEnv?.isNotEmpty() == true) {
+
+                val keystoreFile = project.file(storeFileFromEnv) // Gradle will resolve this path
+                if (keystoreFile.exists()) {
+                    storeFile = keystoreFile
+                    storePassword = storePasswordFromEnv
+                    keyAlias = keyAliasFromEnv
+                    keyPassword = keyPasswordFromEnv
+                    println("Release signing configured using CI environment variables. Keystore: ${keystoreFile.absolutePath}")
+                } else {
+                    println("WARNING: Keystore file specified by SIGNING_KEYSTORE_FILE_PATH ('$storeFileFromEnv') does not exist. Release build may not be signed or may fail.")
+                }
+            } else {
+                println("WARNING: Release signing information not fully provided via CI environment variables. Release build may not be signed or may fail. Missing one or more of: SIGNING_KEYSTORE_FILE_PATH, SIGNING_KEYSTORE_PASSWORD_ENV, SIGNING_KEY_ALIAS_ENV, SIGNING_KEY_PASSWORD_ENV")
+            }
+        }
+    }
+
     defaultConfig {
         applicationId = "bankwiser.bankpromotion.material"
         minSdk = 26
@@ -17,39 +47,14 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    // Signing configurations for release builds
-    signingConfigs {
-        create("release") {
-            // Check if environment variables are set (for CI/CD)
-            // Otherwise, Gradle will prompt for these during local release builds if not set.
-            val keystoreFile = project.rootProject.file("first.keystore")
-            if (keystoreFile.exists()) {
-                storeFile = keystoreFile
-                storePassword = System.getenv("SIGNING_KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("SIGNING_KEY_ALIAS")
-                keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
-            } else if (System.getenv("SIGNING_KEYSTORE_BASE64") != null) {
-                // This branch is mainly for CI, local builds would ideally use the file directly
-                // or have these set in local.properties / gradle.properties
-                // For CI, the workflow will decode the base64 keystore into this file path
-                storeFile = project.layout.buildDirectory.file("signing/first.keystore").get().asFile
-                storePassword = System.getenv("SIGNING_KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("SIGNING_KEY_ALIAS")
-                keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
-            }
-        }
-    }
-
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Apply the signing configuration to the release build type
             signingConfig = signingConfigs.getByName("release")
         }
         debug {
-            // Debug builds can use the default debug signing config
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
         }
