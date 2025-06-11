@@ -1,9 +1,11 @@
 package bankwiser.bankpromotion.material.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -21,7 +23,7 @@ import bankwiser.bankpromotion.material.ui.screens.splash.SplashScreen
 object Routes {
     const val SPLASH = "splash"
     const val ONBOARDING = "onboarding"
-    const val LOGIN = "login" // New Login Route
+    const val LOGIN = "login"
     const val HOME = "home"
     const val SUBCATEGORIES = "subcategories/{categoryId}"
     const val NOTELIST = "notelist/{subCategoryId}"
@@ -37,13 +39,22 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
     val navController = rememberNavController()
     val authState by authViewModel.authState.collectAsState()
 
-    // Determine the start destination based on auth state
+    // This effect will run when authState.user changes.
+    // If user becomes null (signed out), navigate to Login.
+    LaunchedEffect(authState.user) {
+        if (authState.user == null && navController.currentDestination?.route != Routes.LOGIN && navController.currentDestination?.route != Routes.SPLASH && navController.currentDestination?.route != Routes.ONBOARDING) {
+            navController.navigate(Routes.LOGIN) {
+                popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
+
     val startDestination = if (authState.user != null) Routes.HOME else Routes.SPLASH
 
     NavHost(navController = navController, startDestination = startDestination) {
         composable(Routes.SPLASH) {
             SplashScreen(onTimeout = {
-                // If already logged in (e.g. from a previous session), go to Home, else Onboarding
                 val destination = if (authViewModel.authState.value.user != null) Routes.HOME else Routes.ONBOARDING
                 navController.navigate(destination) {
                     popUpTo(Routes.SPLASH) { inclusive = true }
@@ -52,13 +63,14 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
         }
         composable(Routes.ONBOARDING) {
             OnboardingScreen(onGetStarted = {
-                navController.navigate(Routes.LOGIN) { // Go to Login after onboarding
+                navController.navigate(Routes.LOGIN) {
                     popUpTo(Routes.ONBOARDING) { inclusive = true }
                 }
             })
         }
         composable(Routes.LOGIN) {
             LoginScreen(
+                authViewModel = authViewModel, // Pass the shared AuthViewModel
                 onLoginSuccess = {
                     navController.navigate(Routes.HOME) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
@@ -67,10 +79,15 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
             )
         }
         composable(Routes.HOME) {
-            HomeScreen(onCategoryClick = { categoryId ->
-                navController.navigate(Routes.subcategories(categoryId))
-            })
-            // For later: Add a sign-out button on the home screen or profile screen
+            HomeScreen(
+                authViewModel = authViewModel, // Pass the shared AuthViewModel
+                onCategoryClick = { categoryId ->
+                    navController.navigate(Routes.subcategories(categoryId))
+                },
+                onSignOut = { // This callback is triggered from HomeScreen's sign out button
+                    // The LaunchedEffect above will handle navigation when authState.user becomes null
+                }
+            )
         }
         composable(
             route = Routes.SUBCATEGORIES,
