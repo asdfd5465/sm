@@ -1,4 +1,4 @@
-name: Android CI Debug Build
+name: Signed Debug Build
 
 on:
   workflow_dispatch: # Only manual triggering
@@ -58,6 +58,27 @@ jobs:
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT || format('{0}/android-sdk', env.HOME) }}
 
+      - name: Decode Keystore and Set Up Signing Variables
+        run: |
+          echo "Decoding keystore..."
+          SIGNING_KEYSTORE_PATH="${HOME}/release.keystore" # Define where keystore will be in the runner
+          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > $SIGNING_KEYSTORE_PATH
+          
+          echo "Setting up signing environment variables..."
+          echo "SIGNING_KEYSTORE_PATH=$SIGNING_KEYSTORE_PATH" >> $GITHUB_ENV
+          echo "SIGNING_KEYSTORE_PASSWORD=${{ secrets.SIGNING_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+          echo "SIGNING_KEY_ALIAS=${{ secrets.SIGNING_KEY_ALIAS }}" >> $GITHUB_ENV
+          echo "SIGNING_KEY_PASSWORD=${{ secrets.SIGNING_KEY_PASSWORD }}" >> $GITHUB_ENV
+          
+          echo "Keystore decoded and signing variables set for Gradle."
+          # Verify file exists (optional debug)
+          if [ -f "$SIGNING_KEYSTORE_PATH" ]; then
+            echo "Keystore file created at $SIGNING_KEYSTORE_PATH"
+          else
+            echo "ERROR: Keystore file NOT created at $SIGNING_KEYSTORE_PATH"
+            exit 1
+          fi
+
       - name: Setup Gradle Caching
         uses: actions/cache@v4
         with:
@@ -70,30 +91,16 @@ jobs:
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-
-      # --- START OF ADDED SIGNING LOGIC ---
-      - name: Decode Keystore
-        env:
-          KEYSTORE_IS_PRESENT: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' }}
-        if: env.KEYSTORE_IS_PRESENT == 'true'
+            - name: Build Signed Debug APK
         run: |
-          echo "Decoding keystore..."
-          # The output filename must match the one used in the build step env var
-          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > bankwiser-debug-key.jks
-          echo "Keystore decoded successfully."
-      
-      - name: Build and Sign Debug APK
-        # This step now has an env block to pass secrets to Gradle
-        run: |
-          echo "Starting Signed Debug Build..."
+          echo "Starting Debug Build..."
           ./gradlew clean assembleDebug
         env:
-          # These environment variables are read by your app/build.gradle.kts
-          SIGNING_KEYSTORE_PATH: "bankwiser-debug-key.jks"
-          SIGNING_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
-          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
-      # --- END OF ADDED SIGNING LOGIC ---
+          # ANDROID_SDK_ROOT and ANDROID_HOME are already set in GITHUB_ENV
+          # The MYAPP_... signing variables are also set in GITHUB_ENV from the previous step
+          # No need to redefine them here unless for explicit override (not recommended)
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }} 
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
       - name: Upload Debug APK artifact
         uses: actions/upload-artifact@v4
