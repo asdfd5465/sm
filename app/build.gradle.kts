@@ -17,26 +17,25 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Signing configurations for release builds
     signingConfigs {
         create("release") {
-            // These environment variables will be set by the GitHub Action
-            // For local builds, you might need to set them in your local.properties or environment
-            val keystoreFile = System.getenv("SIGNING_KEYSTORE_PATH") ?: project.findProperty("SIGNING_KEYSTORE_PATH")
-            val keystorePassword = System.getenv("SIGNING_KEYSTORE_PASSWORD") ?: project.findProperty("SIGNING_KEYSTORE_PASSWORD")
-            val keyAlias = System.getenv("SIGNING_KEY_ALIAS") ?: project.findProperty("SIGNING_KEY_ALIAS")
-            val keyPassword = System.getenv("SIGNING_KEY_PASSWORD") ?: project.findProperty("SIGNING_KEY_PASSWORD")
-
-            if (keystoreFile != null && File(keystoreFile.toString()).exists()) {
-                storeFile = File(keystoreFile.toString())
-                storePassword = keystorePassword.toString()
-                keyAlias = keyAlias.toString()
-                keyPassword = keyPassword.toString()
-            } else {
-                println("Release signing keystore not found or not configured. Using debug signing.")
-                // Fallback to debug signing if release keystore is not available
-                // This is useful for local development builds that might not have the release secrets
-                // For CI, this block should ideally not be hit if secrets are set up correctly.
-                // You could also make the signingConfig conditional on a build property.
+            // Check if environment variables are set (for CI/CD)
+            // Otherwise, Gradle will prompt for these during local release builds if not set.
+            val keystoreFile = project.rootProject.file("first.keystore")
+            if (keystoreFile.exists()) {
+                storeFile = keystoreFile
+                storePassword = System.getenv("SIGNING_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("SIGNING_KEY_ALIAS")
+                keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+            } else if (System.getenv("SIGNING_KEYSTORE_BASE64") != null) {
+                // This branch is mainly for CI, local builds would ideally use the file directly
+                // or have these set in local.properties / gradle.properties
+                // For CI, the workflow will decode the base64 keystore into this file path
+                storeFile = project.layout.buildDirectory.file("signing/first.keystore").get().asFile
+                storePassword = System.getenv("SIGNING_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("SIGNING_KEY_ALIAS")
+                keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
             }
         }
     }
@@ -50,8 +49,9 @@ android {
             signingConfig = signingConfigs.getByName("release")
         }
         debug {
-            // Debug builds are typically signed with the default debug keystore
-            // You can explicitly define it if needed, but it's usually automatic
+            // Debug builds can use the default debug signing config
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
         }
     }
 
@@ -69,7 +69,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.13" // Check for latest compatible version
+        kotlinCompilerExtensionVersion = "1.5.13"
     }
 }
 
