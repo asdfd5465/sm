@@ -5,7 +5,6 @@ plugins {
     id("com.google.gms.google-services")
 }
 
-// Read signing properties from environment variables
 val keystorePath = System.getenv("SIGNING_KEYSTORE_PATH")
 val keystorePassword = System.getenv("SIGNING_KEYSTORE_PASSWORD")
 val keyAlias = System.getenv("SIGNING_KEY_ALIAS")
@@ -14,7 +13,6 @@ val useRemoteSigning = keystorePath != null && keystorePassword != null && keyAl
 
 android {
     namespace = "bankwiser.bankpromotion.material"
-    compileSdk = 34 // THIS LINE WAS MISSING. IT IS NOW CORRECT.
 
     if (useRemoteSigning) {
         signingConfigs {
@@ -95,7 +93,10 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.android.gms:play-services-auth:21.2.0")
-    // New dependency for modern Credentials API
+    
+    // Modern Credentials API
     implementation("androidx.credentials:credentials:1.2.2")
     implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
+    // THIS WAS THE MISSING DEPENDENCY THAT CAUSED THE BUILD TO FAIL
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
 }
