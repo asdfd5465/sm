@@ -59,6 +59,48 @@ jobs:
           sdkmanager --list_installed || echo "sdkmanager --list_installed failed"
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT || format('{0}/android-sdk', env.HOME) }}
+                  
+      # Step 1: Check if GOOGLE_SERVICES_JSON_BASE64 secret is set
+      - name: Check for Google Services JSON Secret
+        id: check_gservices_secret
+        run: |
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" ]; then
+            echo "GSERVICES_JSON_SECRET_SET=true" >> $GITHUB_ENV
+          else
+            echo "GSERVICES_JSON_SECRET_SET=false" >> $GITHUB_ENV
+          fi
+
+      # Step 2: Decode google-services.json (uses the env var from above step)
+      - name: Decode google-services.json
+        if: env.GSERVICES_JSON_SECRET_SET == 'true'
+        run: |
+          echo "Decoding google-services.json..."
+          mkdir -p ${{ github.workspace }}/app # Ensure app directory exists
+          echo "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" | base64 --decode > ${{ github.workspace }}/app/google-services.json
+          echo "google-services.json placed in app module root."
+          # Verify file exists
+          if [ -f "${{ github.workspace }}/app/google-services.json" ]; then
+            echo "google-services.json created successfully."
+          else
+            echo "ERROR: google-services.json NOT created."
+            # exit 1 # Optionally fail if not present and expected
+          fi
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
       - name: Decode Keystore and Set Up Signing Variables
         run: |
           if [ -z "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" ] || \
