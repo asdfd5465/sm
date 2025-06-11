@@ -21,6 +21,10 @@ class SavedStateViewModelFactory(private val repository: ContentRepository) : Vi
             @Suppress("UNCHECKED_CAST")
             return NoteDetailViewModel(repository, savedStateHandle) as T
         }
+        if (modelClass.isAssignableFrom(TopicContentViewModel::class.java)) { // Add TopicContentViewModel
+            @Suppress("UNCHECKED_CAST")
+            return TopicContentViewModel(repository, savedStateHandle) as T
+        }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
 }
