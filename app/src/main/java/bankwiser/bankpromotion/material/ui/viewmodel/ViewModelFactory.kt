@@ -10,6 +10,10 @@ class ViewModelFactory(private val repository: ContentRepository) : ViewModelPro
             @Suppress("UNCHECKED_CAST")
             return HomeViewModel(repository) as T
         }
+        if (modelClass.isAssignableFrom(SearchViewModel::class.java)) { // Add SearchViewModel
+            @Suppress("UNCHECKED_CAST")
+            return SearchViewModel(repository) as T
+        }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
