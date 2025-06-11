@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">BankWiser Pro</string>
+    <string name="default_web_client_id" translatable="false">495314399250-vaigkc1c7nkrgr0d231rpvgupmbtnrrr.apps.googleusercontent.com</string>
 </resources>
