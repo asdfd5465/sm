@@ -59,12 +59,13 @@ jobs:
           sdkmanager --list_installed || echo "sdkmanager --list_installed failed"
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT || format('{0}/android-sdk', env.HOME) }}
-          
-      - name: Decode Keystore and Set Up Signing Variables
+                - name: Decode Keystore and Set Up Signing Variables
+        # The 'if' condition applies to the entire step
+        if: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' && secrets.SIGNING_KEYSTORE_PASSWORD != '' && secrets.SIGNING_KEY_ALIAS != '' && secrets.SIGNING_KEY_PASSWORD != '' }}
         run: |
           echo "Decoding keystore..."
           # Define a consistent path for the keystore file in the runner's environment
-          KEYSTORE_FILE_PATH_IN_RUNNER="${HOME}/signing_keystore.jks" # Using .jks as it's common, adjust if yours is .keystore
+          KEYSTORE_FILE_PATH_IN_RUNNER="${HOME}/signing_keystore.jks"
           echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > $KEYSTORE_FILE_PATH_IN_RUNNER
           
           echo "Setting up signing environment variables for Gradle..."
@@ -82,8 +83,6 @@ jobs:
             echo "ERROR: Keystore file NOT created at $KEYSTORE_FILE_PATH_IN_RUNNER"
             exit 1 # Fail the job if keystore is not created
           fi
-        # Corrected 'if' condition syntax
-        if: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' }}
 
       - name: Setup Gradle Caching
         uses: actions/cache@v4
