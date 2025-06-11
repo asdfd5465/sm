@@ -1,4 +1,4 @@
-name: Android Release Build and Sign
+name: Phase3 Sign
 
 on:
   workflow_dispatch: # Allows manual triggering
