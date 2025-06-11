@@ -59,7 +59,7 @@ jobs:
           sdkmanager --list_installed || echo "sdkmanager --list_installed failed"
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT || format('{0}/android-sdk', env.HOME) }}
-                - name: Decode Keystore and Set Up Signing Variables
+      - name: Decode Keystore and Set Up Signing Variables
         # The 'if' condition applies to the entire step
         if: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' && secrets.SIGNING_KEYSTORE_PASSWORD != '' && secrets.SIGNING_KEY_ALIAS != '' && secrets.SIGNING_KEY_PASSWORD != '' }}
         run: |
