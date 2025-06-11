@@ -1,5 +1,6 @@
 package bankwiser.bankpromotion.material.ui.navigation
 
+import androidx.compose.foundation.layout.padding // Needed for Modifier.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
@@ -9,6 +10,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier // <<< IMPORT ADDED HERE
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -32,10 +34,9 @@ object Routes {
     const val SPLASH = "splash"
     const val ONBOARDING = "onboarding"
     const val LOGIN = "login"
-    const val MAIN_APP_GRAPH = "main_app_graph" // Parent route for screens after login
+    const val MAIN_APP_GRAPH = "main_app_graph"
     const val HOME = "home"
     const val SEARCH = "search"
-    // Note: SubCategoryScreen will be replaced by TopicContentScreen navigation
     const val TOPIC_CONTENT = "topic_content/{subCategoryId}/{subCategoryName}"
     const val NOTEREADER = "notereader/{noteId}"
 
@@ -55,11 +56,11 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
             navController.currentDestination?.route != Routes.ONBOARDING
         ) {
             navController.navigate(Routes.LOGIN) {
-                popUpTo(navController.graph.id) { inclusive = true } // Clear entire back stack
+                popUpTo(navController.graph.id) { inclusive = true }
             }
         }
     }
-    
+
     val startDestination = if (authState.user != null) Routes.MAIN_APP_GRAPH else Routes.SPLASH
 
     NavHost(navController = navController, startDestination = startDestination) {
@@ -82,12 +83,12 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
                 }
             )
         }
-        // Main App Graph with Bottom Navigation
         composable(Routes.MAIN_APP_GRAPH) {
-            MainAppScaffold(authViewModel = authViewModel)
+            MainAppScaffold(authViewModel = authViewModel, appNavController = navController) // Pass appNavController
         }
         // Screens accessible from MainAppScaffold's NavHost (without bottom nav)
-         composable(
+        // OR directly if not using the nested graph for these
+        composable(
             route = Routes.TOPIC_CONTENT,
             arguments = listOf(
                 navArgument("subCategoryId") { type = NavType.StringType },
@@ -111,12 +112,11 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
 
 
 @Composable
-fun MainAppScaffold(authViewModel: AuthViewModel) {
-    val mainNavController = rememberNavController() // Separate NavController for main content area
+fun MainAppScaffold(authViewModel: AuthViewModel, appNavController: NavHostController) { // Receive appNavController
+    val mainNavController = rememberNavController()
     val items = listOf(
         BottomNavItem.Home,
         BottomNavItem.Search
-        // Add Profile later
     )
     Scaffold(
         bottomBar = {
@@ -145,10 +145,8 @@ fun MainAppScaffold(authViewModel: AuthViewModel) {
                 HomeScreen(
                     authViewModel = authViewModel,
                     onCategoryClick = { categoryId ->
-                        // For Home, we navigate to SubCategoryScreen which then goes to TopicContent
-                        // This part needs to be decided: Does Category click lead to a SubCategory list or directly to a topic (if only one subcat)?
-                        // For now, let's assume it goes to a SubCategory list screen first.
-                         mainNavController.navigate("subcategories_list/$categoryId") // A temporary route for SubCategory List
+                        // This should navigate within the appNavController to the SubCategory list
+                        appNavController.navigate("subcategories_list/$categoryId")
                     },
                     onSignOut = {
                         // AuthViewModel's state change will trigger navigation in AppNavigation's LaunchedEffect
@@ -157,45 +155,17 @@ fun MainAppScaffold(authViewModel: AuthViewModel) {
             }
             composable(Routes.SEARCH) {
                  SearchScreen(
-                    onNavigateUp = { mainNavController.navigateUp() }, // Or handle differently if Search is a root tab
-                    onNoteClick = { noteId -> mainNavController.navigate(Routes.noteReader(noteId))}
+                    onNavigateUp = { /* Decide if search needs up nav, or if it's a root tab */ },
+                    onNoteClick = { noteId -> appNavController.navigate(Routes.noteReader(noteId))} // Use appNavController
                 )
             }
-             // Temporary SubCategory List Screen - This will navigate to TopicContent
-            composable(
-                route = "subcategories_list/{categoryId}",
-                 arguments = listOf(navArgument("categoryId") { type = NavType.StringType })
-            ){
-                SubCategoryScreen(
-                    onSubCategoryClick = { subCategoryId ->
-                         // Here, fetch the subCategoryName if needed before navigating
-                         // For simplicity now, we might pass "Topic" or try to get it
-                         // Ideally, SubCategory object would be available to get its name
-                        mainNavController.navigate(Routes.topicContent(subCategoryId, "Topic Details")) // Pass a placeholder name
-                    },
-                    onNavigateUp = { mainNavController.navigateUp() }
-                )
-            }
-            // Screens accessible from this NavHost (will be displayed above bottom nav)
-            composable(
-                route = Routes.TOPIC_CONTENT,
-                arguments = listOf(
-                    navArgument("subCategoryId") { type = NavType.StringType },
-                    navArgument("subCategoryName") {type = NavType.StringType }
-                )
-            ) { backStackEntry ->
-                TopicContentScreen(
-                    onNoteClick = { noteId -> mainNavController.navigate(Routes.noteReader(noteId)) },
-                    onNavigateUp = { mainNavController.navigateUp() },
-                    subCategoryName = backStackEntry.arguments?.getString("subCategoryName")
-                )
-            }
-            composable(
-                route = Routes.NOTEREADER,
-                arguments = listOf(navArgument("noteId") { type = NavType.StringType })
-            ) {
-                NoteReaderScreen(onNavigateUp = { mainNavController.navigateUp() })
-            }
+            // This route is now part of appNavController, so it should be defined there or
+            // appNavController should be passed to this SubCategoryScreen for further navigation.
+            // For Phase 4, clicking a category in HomeScreen will directly go to TopicContentScreen.
+            // The SubCategoryScreen list is temporarily removed to simplify navigation.
+            // The `subcategories_list/{categoryId}` route is effectively handled by HomeScreen
+            // which will pass necessary info to `TopicContentScreen` via AppNavController.
+            // If you need a separate SubCategory list screen, it should be part of the appNavController graph.
         }
     }
 }
@@ -203,5 +173,4 @@ fun MainAppScaffold(authViewModel: AuthViewModel) {
 sealed class BottomNavItem(var title:String, var icon:androidx.compose.ui.graphics.vector.ImageVector, var route:String){
     object Home : BottomNavItem("Home", Icons.Filled.Home, Routes.HOME)
     object Search : BottomNavItem("Search", Icons.Filled.Search, Routes.SEARCH)
-    // Later: object Profile : BottomNavItem("Profile", Icons.Filled.Person, Routes.PROFILE)
 }
