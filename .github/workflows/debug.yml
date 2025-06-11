@@ -1,7 +1,7 @@
 name: Android CI Debug Build
 
 on:
-  workflow_dispatch: # Allows manual triggering
+  workflow_dispatch: # Only manual triggering
 
 jobs:
   build_debug:
@@ -21,20 +21,43 @@ jobs:
       - name: Set up Android SDK
         run: |
           echo "ANDROID_SDK_ROOT=${HOME}/android-sdk" >> $GITHUB_ENV
-          echo "ANDROID_HOME=${HOME}/android-sdk" >> $GITHUB_ENV
+          echo "ANDROID_HOME=${HOME}/android-sdk" >> $GITHUB_ENV # Legacy
+
           SDK_CMD_TOOLS_PATH="${HOME}/android-sdk/cmdline-tools/latest/bin"
           SDK_PLATFORM_TOOLS_PATH="${HOME}/android-sdk/platform-tools"
+
           echo "$SDK_CMD_TOOLS_PATH" >> $GITHUB_PATH
           echo "$SDK_PLATFORM_TOOLS_PATH" >> $GITHUB_PATH
+
+          export PATH="$SDK_CMD_TOOLS_PATH:$SDK_PLATFORM_TOOLS_PATH:$PATH"
+
           mkdir -p ${HOME}/android-sdk/cmdline-tools
+          
           CMDTOOLS_VERSION_ZIP="commandlinetools-linux-11076708_latest.zip"
+          echo "Downloading Android Command-line Tools: ${CMDTOOLS_VERSION_ZIP}"
           wget --quiet "https://dl.google.com/android/repository/${CMDTOOLS_VERSION_ZIP}" -O cmdline-tools.zip
+          echo "Unzipping Command-line Tools..."
           unzip -q cmdline-tools.zip -d ${HOME}/android-sdk/cmdline-tools
           mv ${HOME}/android-sdk/cmdline-tools/cmdline-tools ${HOME}/android-sdk/cmdline-tools/latest
           rm cmdline-tools.zip
-          yes | sdkmanager --licenses > /dev/null
-          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools" > /dev/null
+          echo "Command-line Tools installed to ${HOME}/android-sdk/cmdline-tools/latest"
+
+          echo "Verifying sdkmanager..."
+          which sdkmanager
+          sdkmanager --version || echo "sdkmanager --version failed"
+
+          echo "Accepting SDK licenses..."
+          yes | sdkmanager --licenses > /dev/null || echo "Failed to accept licenses, retrying with --sdk_root"
+          yes | sdkmanager --licenses --sdk_root="${ANDROID_HOME}" > /dev/null || echo "Failed to accept licenses with --sdk_root"
           
+          echo "Installing SDK packages..."
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools" > /dev/null || echo "Failed to install SDK packages"
+          
+          echo "SDK Setup Complete. Installed packages:"
+          sdkmanager --list_installed || echo "sdkmanager --list_installed failed"
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT || format('{0}/android-sdk', env.HOME) }}
+
       - name: Setup Gradle Caching
         uses: actions/cache@v4
         with:
@@ -48,29 +71,30 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Decode Keystore and Set Signing Environment
-        # THIS IS THE CORRECTED LOGIC USING THE ROBUST PATTERN
+      # --- START OF ADDED SIGNING LOGIC ---
+      - name: Decode Keystore
         env:
           KEYSTORE_IS_PRESENT: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' }}
         if: env.KEYSTORE_IS_PRESENT == 'true'
         run: |
           echo "Decoding keystore..."
-          KEYSTORE_FILE_PATH="${{ github.workspace }}/bankwiser-debug-key.jks"
-          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > $KEYSTORE_FILE_PATH
-          
-          echo "Setting up signing environment variables for Gradle..."
-          echo "SIGNING_KEYSTORE_PATH=$KEYSTORE_FILE_PATH" >> $GITHUB_ENV
-          echo "SIGNING_KEYSTORE_PASSWORD=${{ secrets.SIGNING_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
-          echo "SIGNING_KEY_ALIAS=${{ secrets.SIGNING_KEY_ALIAS }}" >> $GITHUB_ENV
-          echo "SIGNING_KEY_PASSWORD=${{ secrets.SIGNING_KEY_PASSWORD }}" >> $GITHUB_ENV
-          
-          echo "Keystore decoded and signing variables exported."
+          # The output filename must match the one used in the build step env var
+          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > bankwiser-debug-key.jks
+          echo "Keystore decoded successfully."
       
       - name: Build and Sign Debug APK
+        # This step now has an env block to pass secrets to Gradle
         run: |
           echo "Starting Signed Debug Build..."
           ./gradlew clean assembleDebug
-      
+        env:
+          # These environment variables are read by your app/build.gradle.kts
+          SIGNING_KEYSTORE_PATH: "bankwiser-debug-key.jks"
+          SIGNING_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+      # --- END OF ADDED SIGNING LOGIC ---
+
       - name: Upload Debug APK artifact
         uses: actions/upload-artifact@v4
         with:
