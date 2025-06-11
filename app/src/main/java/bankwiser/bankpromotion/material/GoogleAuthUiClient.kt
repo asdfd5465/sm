@@ -69,7 +69,6 @@ class GoogleAuthUiClient(
                 errorMessage = null
             )
         }
-        // Handle other types if necessary, like Passkeys
         if (credential is CustomCredential && credential.type == "androidx.credentials.TYPE_PASSWORD_CREDENTIAL") {
             return SignInResult(data = null, errorMessage = "Password credential not supported.")
         }
