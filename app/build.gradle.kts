@@ -5,6 +5,7 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+// Read signing properties from environment variables
 val keystorePath = System.getenv("SIGNING_KEYSTORE_PATH")
 val keystorePassword = System.getenv("SIGNING_KEYSTORE_PASSWORD")
 val keyAlias = System.getenv("SIGNING_KEY_ALIAS")
@@ -12,7 +13,9 @@ val keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
 val useRemoteSigning = keystorePath != null && keystorePassword != null && keyAlias != null && keyPassword != null
 
 android {
+    // Restored compileSdk and other essential android {} properties that were accidentally deleted
     namespace = "bankwiser.bankpromotion.material"
+    compileSdk = 34
 
     if (useRemoteSigning) {
         signingConfigs {
@@ -97,6 +100,5 @@ dependencies {
     // Modern Credentials API
     implementation("androidx.credentials:credentials:1.2.2")
     implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
-    // THIS WAS THE MISSING DEPENDENCY THAT CAUSED THE BUILD TO FAIL
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
 }
