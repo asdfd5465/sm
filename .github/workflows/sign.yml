@@ -59,7 +59,7 @@ jobs:
           sdkmanager --list_installed || echo "sdkmanager --list_installed failed"
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT || format('{0}/android-sdk', env.HOME) }}
-
+          
       - name: Decode Keystore and Set Up Signing Variables
         run: |
           echo "Decoding keystore..."
@@ -80,11 +80,10 @@ jobs:
             echo "Keystore file created at $KEYSTORE_FILE_PATH_IN_RUNNER"
           else
             echo "ERROR: Keystore file NOT created at $KEYSTORE_FILE_PATH_IN_RUNNER"
-            exit 1
+            exit 1 # Fail the job if keystore is not created
           fi
-        # This step will only run if the keystore secret is present.
-        # Gradle build will fail if other signing secrets are missing.
-        if: secrets.SIGNING_KEYSTORE_BASE64 != ''
+        # Corrected 'if' condition syntax
+        if: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' }}
 
       - name: Setup Gradle Caching
         uses: actions/cache@v4
