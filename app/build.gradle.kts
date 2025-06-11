@@ -1,7 +1,6 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    // ksp is no longer needed for this, but keep it for future phases
     id("com.google.devtools.ksp")
 }
 
@@ -18,11 +17,41 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            // These environment variables will be set by the GitHub Action
+            // For local builds, you might need to set them in your local.properties or environment
+            val keystoreFile = System.getenv("SIGNING_KEYSTORE_PATH") ?: project.findProperty("SIGNING_KEYSTORE_PATH")
+            val keystorePassword = System.getenv("SIGNING_KEYSTORE_PASSWORD") ?: project.findProperty("SIGNING_KEYSTORE_PASSWORD")
+            val keyAlias = System.getenv("SIGNING_KEY_ALIAS") ?: project.findProperty("SIGNING_KEY_ALIAS")
+            val keyPassword = System.getenv("SIGNING_KEY_PASSWORD") ?: project.findProperty("SIGNING_KEY_PASSWORD")
+
+            if (keystoreFile != null && File(keystoreFile.toString()).exists()) {
+                storeFile = File(keystoreFile.toString())
+                storePassword = keystorePassword.toString()
+                keyAlias = keyAlias.toString()
+                keyPassword = keyPassword.toString()
+            } else {
+                println("Release signing keystore not found or not configured. Using debug signing.")
+                // Fallback to debug signing if release keystore is not available
+                // This is useful for local development builds that might not have the release secrets
+                // For CI, this block should ideally not be hit if secrets are set up correctly.
+                // You could also make the signingConfig conditional on a build property.
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Apply the signing configuration to the release build type
+            signingConfig = signingConfigs.getByName("release")
+        }
+        debug {
+            // Debug builds are typically signed with the default debug keystore
+            // You can explicitly define it if needed, but it's usually automatic
         }
     }
 
