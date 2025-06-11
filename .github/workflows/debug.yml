@@ -1,4 +1,4 @@
-name: Android CI Debug Build
+name: Sign Debug Build
 
 on:
   workflow_dispatch: # Only manual triggering
