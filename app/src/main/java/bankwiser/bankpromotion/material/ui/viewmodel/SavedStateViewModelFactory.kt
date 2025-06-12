@@ -9,18 +9,24 @@ import bankwiser.bankpromotion.material.data.repository.ContentRepository
 class SavedStateViewModelFactory(private val repository: ContentRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
         val savedStateHandle = extras.createSavedStateHandle()
-        if (modelClass.isAssignableFrom(SubCategoryViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return SubCategoryViewModel(repository, savedStateHandle) as T
+        
+        return when {
+            modelClass.isAssignableFrom(SubCategoryViewModel::class.java) -> {
+                @Suppress("UNCHECKED_CAST")
+                SubCategoryViewModel(repository, savedStateHandle) as T
+            }
+            modelClass.isAssignableFrom(TopicContentViewModel::class.java) -> {
+                @Suppress("UNCHECKED_CAST")
+                TopicContentViewModel(repository, savedStateHandle) as T
+            }
+            modelClass.isAssignableFrom(NoteDetailViewModel::class.java) -> {
+                @Suppress("UNCHECKED_CAST")
+                NoteDetailViewModel(repository, savedStateHandle) as T
+            }
+            // NoteListViewModel is no longer actively used as TopicContentViewModel handles its content.
+            // If it's still somehow being instantiated, it would cause issues.
+            // For now, ensuring TopicContentViewModel is correctly handled is key.
+            else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
-        if (modelClass.isAssignableFrom(NoteListViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return NoteListViewModel(repository, savedStateHandle) as T
-        }
-        if (modelClass.isAssignableFrom(NoteDetailViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return NoteDetailViewModel(repository, savedStateHandle) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
 }
