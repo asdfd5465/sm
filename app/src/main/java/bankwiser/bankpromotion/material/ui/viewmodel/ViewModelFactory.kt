@@ -10,7 +10,7 @@ class ViewModelFactory(private val repository: ContentRepository) : ViewModelPro
             @Suppress("UNCHECKED_CAST")
             return HomeViewModel(repository) as T
         }
-        if (modelClass.isAssignableFrom(SearchViewModel::class.java)) { // Add SearchViewModel
+        if (modelClass.isAssignableFrom(SearchViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
             return SearchViewModel(repository) as T
         }
