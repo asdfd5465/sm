@@ -4,7 +4,7 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
-import bankwiser.bankpromotion.material.data.model.* // Import new models
+import bankwiser.bankpromotion.material.data.model.*
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -41,14 +41,15 @@ class DatabaseHelper(private val context: Context) {
             return query(db)
         } catch (e: SQLiteException) {
             e.printStackTrace()
+            // Consider a more user-friendly error handling or logging for production
             throw e
         } finally {
             db.close()
         }
     }
-    
+
     private fun Cursor.getStringOrNull(columnName: String): String? {
-        val index = getColumnIndex(columnName)
+        val index = getColumnIndex(columnName) // Use getColumnIndex for robustness
         return if (index != -1 && !isNull(index)) getString(index) else null
     }
 
@@ -56,10 +57,10 @@ class DatabaseHelper(private val context: Context) {
         val index = getColumnIndex(columnName)
         return if (index != -1 && !isNull(index)) getInt(index) else null
     }
-    
+
     fun getAllCategories(): List<Category> = readData { db ->
         val categories = mutableListOf<Category>()
-        db.rawQuery("SELECT * FROM categories", null).use { cursor ->
+        db.rawQuery("SELECT category_id, category_name FROM categories WHERE is_deleted = 0", null).use { cursor ->
             while (cursor.moveToNext()) {
                 categories.add(
                     Category(
@@ -74,7 +75,7 @@ class DatabaseHelper(private val context: Context) {
 
     fun getSubCategories(categoryId: String): List<SubCategory> = readData { db ->
         val subCategories = mutableListOf<SubCategory>()
-        db.rawQuery("SELECT * FROM subcategories WHERE category_id = ?", arrayOf(categoryId)).use { cursor ->
+        db.rawQuery("SELECT sub_category_id, category_id, sub_category_name FROM subcategories WHERE category_id = ? AND is_deleted = 0", arrayOf(categoryId)).use { cursor ->
             while (cursor.moveToNext()) {
                 subCategories.add(
                     SubCategory(
@@ -88,7 +89,6 @@ class DatabaseHelper(private val context: Context) {
         subCategories
     }
 
-    // --- Notes ---
     fun getNotes(subCategoryId: String): List<Note> = readData { db ->
         val notes = mutableListOf<Note>()
         val query = "SELECT note_id, title, body, sub_category_id FROM notes WHERE sub_category_id = ? AND is_deleted = 0"
@@ -106,7 +106,7 @@ class DatabaseHelper(private val context: Context) {
         }
         notes
     }
-    
+
     fun getNote(noteId: String): Note? = readData { db ->
         val query = "SELECT note_id, title, body, sub_category_id FROM notes WHERE note_id = ? AND is_deleted = 0"
         db.rawQuery(query, arrayOf(noteId)).use { cursor ->
@@ -122,7 +122,6 @@ class DatabaseHelper(private val context: Context) {
         null
     }
 
-    // --- FAQs ---
     fun getFaqs(subCategoryId: String): List<Faq> = readData { db ->
         val faqs = mutableListOf<Faq>()
         val query = "SELECT faq_id, question, answer, sub_category_id FROM faqs WHERE sub_category_id = ? AND is_deleted = 0"
@@ -141,7 +140,6 @@ class DatabaseHelper(private val context: Context) {
         faqs
     }
 
-    // --- MCQs ---
     fun getMcqs(subCategoryId: String): List<Mcq> = readData { db ->
         val mcqs = mutableListOf<Mcq>()
         val query = "SELECT mcq_id, question_text, option_a, option_b, option_c, option_d, correct_option, sub_category_id FROM mcqs WHERE sub_category_id = ? AND is_deleted = 0"
@@ -163,8 +161,7 @@ class DatabaseHelper(private val context: Context) {
         }
         mcqs
     }
-    
-    // --- AudioContent ---
+
     fun getAudioContent(subCategoryId: String): List<AudioContent> = readData { db ->
         val audioList = mutableListOf<AudioContent>()
         val query = "SELECT audio_id, title, audio_url, duration_seconds, sub_category_id FROM audiocontent WHERE sub_category_id = ? AND is_deleted = 0"
@@ -184,7 +181,7 @@ class DatabaseHelper(private val context: Context) {
         audioList
     }
 
-    // --- Search (Simplified for titles only) ---
+    // --- Search Functions ---
     fun searchNotesByTitle(query: String): List<Note> = readData { db ->
         val notes = mutableListOf<Note>()
         val sql = "SELECT note_id, title, body, sub_category_id FROM notes WHERE title LIKE ? AND is_deleted = 0"
@@ -220,5 +217,45 @@ class DatabaseHelper(private val context: Context) {
         }
         faqs
     }
-    // Add similar search functions for MCQs (question_text) and AudioContent (title)
+
+    fun searchMcqsByQuestionText(query: String): List<Mcq> = readData { db ->
+        val mcqs = mutableListOf<Mcq>()
+        val sql = "SELECT mcq_id, question_text, option_a, option_b, option_c, option_d, correct_option, sub_category_id FROM mcqs WHERE question_text LIKE ? AND is_deleted = 0"
+        db.rawQuery(sql, arrayOf("%$query%")).use { cursor ->
+            while (cursor.moveToNext()) {
+                mcqs.add(
+                    Mcq(
+                        id = cursor.getString(cursor.getColumnIndexOrThrow("mcq_id")),
+                        questionText = cursor.getString(cursor.getColumnIndexOrThrow("question_text")),
+                        optionA = cursor.getString(cursor.getColumnIndexOrThrow("option_a")),
+                        optionB = cursor.getString(cursor.getColumnIndexOrThrow("option_b")),
+                        optionC = cursor.getString(cursor.getColumnIndexOrThrow("option_c")),
+                        optionD = cursor.getString(cursor.getColumnIndexOrThrow("option_d")),
+                        correctOption = cursor.getString(cursor.getColumnIndexOrThrow("correct_option")),
+                        subCategoryId = cursor.getStringOrNull("sub_category_id")
+                    )
+                )
+            }
+        }
+        mcqs
+    }
+
+    fun searchAudioByTitle(query: String): List<AudioContent> = readData { db ->
+        val audioList = mutableListOf<AudioContent>()
+        val sql = "SELECT audio_id, title, audio_url, duration_seconds, sub_category_id FROM audiocontent WHERE title LIKE ? AND is_deleted = 0"
+        db.rawQuery(sql, arrayOf("%$query%")).use { cursor ->
+            while (cursor.moveToNext()) {
+                audioList.add(
+                    AudioContent(
+                        id = cursor.getString(cursor.getColumnIndexOrThrow("audio_id")),
+                        title = cursor.getString(cursor.getColumnIndexOrThrow("title")),
+                        audioUrl = cursor.getString(cursor.getColumnIndexOrThrow("audio_url")),
+                        durationSeconds = cursor.getIntOrNull("duration_seconds"),
+                        subCategoryId = cursor.getStringOrNull("sub_category_id")
+                    )
+                )
+            }
+        }
+        audioList
+    }
 }
