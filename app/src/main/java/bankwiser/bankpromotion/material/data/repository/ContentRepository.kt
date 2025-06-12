@@ -5,7 +5,7 @@ import bankwiser.bankpromotion.material.data.local.DatabaseHelper
 class ContentRepository(private val dbHelper: DatabaseHelper) {
     fun getAllCategories() = dbHelper.getAllCategories()
     fun getSubCategories(categoryId: String) = dbHelper.getSubCategories(categoryId)
-    
+
     // Notes
     fun getNotes(subCategoryId: String) = dbHelper.getNotes(subCategoryId)
     fun getNote(noteId: String) = dbHelper.getNote(noteId)
@@ -22,5 +22,6 @@ class ContentRepository(private val dbHelper: DatabaseHelper) {
     // Search
     fun searchNotesByTitle(query: String) = dbHelper.searchNotesByTitle(query)
     fun searchFaqsByQuestion(query: String) = dbHelper.searchFaqsByQuestion(query)
-    // Add more search methods later
+    fun searchMcqsByQuestionText(query: String) = dbHelper.searchMcqsByQuestionText(query)
+    fun searchAudioByTitle(query: String) = dbHelper.searchAudioByTitle(query)
 }
