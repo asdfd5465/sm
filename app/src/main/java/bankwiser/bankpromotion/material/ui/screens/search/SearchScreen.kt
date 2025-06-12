@@ -14,8 +14,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
-import bankwiser.bankpromotion.material.ui.screens.topic.FaqItem // Re-use FaqItem
-import bankwiser.bankpromotion.material.ui.screens.topic.NoteItemCard // Re-use NoteItemCard
+import bankwiser.bankpromotion.material.player.PlayerManager // Assuming PlayerManager is needed for AudioItemCard
+import bankwiser.bankpromotion.material.ui.screens.topic.AudioItemCard // Re-use AudioItemCard
+import bankwiser.bankpromotion.material.ui.screens.topic.FaqItem
+import bankwiser.bankpromotion.material.ui.screens.topic.McqItem // Re-use McqItem
+import bankwiser.bankpromotion.material.ui.screens.topic.NoteItemCard
 import bankwiser.bankpromotion.material.ui.viewmodel.SearchViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
 
@@ -23,18 +26,27 @@ import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
 @Composable
 fun SearchScreen(
     onNavigateUp: () -> Unit,
-    onNoteClick: (noteId: String) -> Unit
-    // Add onFaqClick, onMcqClick, onAudioClick later if needed
+    onNoteClick: (noteId: String) -> Unit,
+    // Add onMcqClick and onAudioClick if needed for direct navigation from search
+    // For now, clicking these items from search might not do anything further than display
 ) {
     val context = LocalContext.current
     val repository = (context.applicationContext as BankWiserApplication).contentRepository
     val viewModel: SearchViewModel = viewModel(factory = ViewModelFactory(repository))
     val uiState by viewModel.uiState.collectAsState()
-    var searchQuery by remember { mutableStateOf("") }
+    var searchQuery by remember { mutableStateOf(uiState.query) } // Initialize with VM state
 
+    // This will trigger search when searchQuery state changes
     LaunchedEffect(searchQuery) {
         viewModel.onSearchQueryChanged(searchQuery)
     }
+     // To handle back press correctly when search is empty.
+    val effectiveOnNavigateUp = if (uiState.initialScreen) {
+        { /* If initial screen (no query yet), let system handle back or specific nav controller pop */ }
+    } else {
+        onNavigateUp // Use the provided onNavigateUp for other cases
+    }
+
 
     Scaffold(
         topBar = {
@@ -46,7 +58,7 @@ fun SearchScreen(
                         placeholder = { Text("Search content...") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        leadingIcon = { Icon(Icons.Filled.Search, "Search Icon")},
+                        leadingIcon = { Icon(Icons.Filled.Search, "Search Icon") },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = MaterialTheme.colorScheme.surface,
                             unfocusedContainerColor = MaterialTheme.colorScheme.surface,
@@ -57,7 +69,7 @@ fun SearchScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
+                    IconButton(onClick = effectiveOnNavigateUp) { // Use effectiveOnNavigateUp
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 }
@@ -65,15 +77,24 @@ fun SearchScreen(
         }
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
-            if (uiState.isLoading) {
+            if (uiState.isLoading && !uiState.initialScreen) { // Show loader only if not initial and loading
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            } else if (uiState.noResults && uiState.query.isNotBlank()) {
-                 Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+            } else if (uiState.noResults && !uiState.initialScreen) { // Show no results only if not initial and no results
+                Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
                     Text("No results found for \"${uiState.query}\"")
                 }
-            } else {
+            } else if (uiState.initialScreen && uiState.query.isBlank()){
+                 Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                    Text("Type to search content.")
+                }
+            }
+            else {
+                // PlayerManager instance needed for AudioItemCard if it's displayed
+                val playerManager = remember { PlayerManager(context) }
+                DisposableEffect(Unit) { onDispose { playerManager.releasePlayer() } }
+
                 LazyColumn(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -87,10 +108,21 @@ fun SearchScreen(
                     if (uiState.faqs.isNotEmpty()) {
                         item { SectionHeader("FAQs") }
                         items(uiState.faqs) { faq ->
-                            FaqItem(faq = faq) // No click action for FAQ item itself for now
+                            FaqItem(faq = faq)
                         }
                     }
-                    // Add sections for MCQs and Audio later
+                    if (uiState.mcqs.isNotEmpty()) {
+                        item { SectionHeader("MCQs") }
+                        items(uiState.mcqs) { mcq ->
+                            McqItem(mcq = mcq)
+                        }
+                    }
+                    if (uiState.audioContent.isNotEmpty()) {
+                        item { SectionHeader("Audio Content") }
+                        items(uiState.audioContent) { audio ->
+                            AudioItemCard(audio = audio, playerManager = playerManager)
+                        }
+                    }
                 }
             }
         }
@@ -102,6 +134,6 @@ fun SectionHeader(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(vertical = 8.dp)
+        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp) // Added more spacing
     )
 }
