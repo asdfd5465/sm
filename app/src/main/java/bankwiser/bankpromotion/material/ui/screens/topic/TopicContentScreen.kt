@@ -281,41 +281,50 @@ fun OptionRow(prefix: String, text: String, isSelected: Boolean, showAsCorrect: 
 
 @Composable
 fun AudioItemCard(audio: AudioContent, playerManager: PlayerManager) {
-    // isPlayingCurrent is simplified for this phase.
-    // A proper implementation would observe playerManager.isPlaying state more robustly.
-    var isPlayingCurrent by remember(audio.audioUrl, playerManager) { mutableStateOf(false) }
-
+    val currentPlayerData by playerManager.playerState.collectAsState()
+    // Check if this specific audio item is the one currently playing or cued.
+    val isThisAudioActive = currentPlayerData.currentPlayingUrl == audio.audioUrl
+    val isPlayingThisAudio = isThisAudioActive && currentPlayerData.isActuallyPlaying
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = MaterialTheme.shapes.large
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(audio.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
-                audio.durationSeconds?.let {
-                    Text("${it / 60}:${String.format("%02d", it % 60)}", style = MaterialTheme.typography.bodySmall)
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(audio.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                    audio.durationSeconds?.let {
+                        Text("${it / 60}:${String.format("%02d", it % 60)}", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                IconButton(onClick = {
+                    if (isPlayingThisAudio) {
+                        playerManager.pause()
+                    } else {
+                        playerManager.play(audio.audioUrl)
+                    }
+                }) {
+                    Icon(
+                        imageVector = if (isPlayingThisAudio) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
+                        contentDescription = if (isPlayingThisAudio) "Pause" else "Play",
+                        modifier = Modifier.size(40.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
-            IconButton(onClick = {
-                if (isPlayingCurrent) {
-                    playerManager.pause()
-                    isPlayingCurrent = false
-                } else {
-                    playerManager.play(audio.audioUrl)
-                    isPlayingCurrent = true
-                }
-            }) {
-                Icon(
-                    imageVector = if (isPlayingCurrent) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
-                    contentDescription = if (isPlayingCurrent) "Pause" else "Play",
-                    modifier = Modifier.size(40.dp),
-                    tint = MaterialTheme.colorScheme.primary
+            // Show error message only if this specific audio item encountered an error
+            if (isThisAudioActive && currentPlayerData.error != null) {
+                Text(
+                    text = "Error: ${currentPlayerData.error}",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 4.dp)
                 )
             }
         }
