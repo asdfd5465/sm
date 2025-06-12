@@ -1,8 +1,8 @@
 package bankwiser.bankpromotion.material.ui.screens.topic
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade // <<< IMPORT ADDED HERE
-import androidx.compose.foundation.background // <<< IMPORT ADDED HERE
+import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,7 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color // <<< IMPORT ADDED HERE
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -25,7 +25,6 @@ import bankwiser.bankpromotion.material.data.model.*
 import bankwiser.bankpromotion.material.player.PlayerManager
 import bankwiser.bankpromotion.material.ui.viewmodel.SavedStateViewModelFactory
 import bankwiser.bankpromotion.material.ui.viewmodel.TopicContentViewModel
-// TopicContentUiState is no longer directly used here as ViewModel manages it.
 
 enum class ContentTab { NOTES, FAQS, MCQS, AUDIO }
 
@@ -42,8 +41,11 @@ fun TopicContentScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     var selectedTab by remember { mutableStateOf(ContentTab.NOTES) }
+    // Use rememberSavable for playerManager if you want it to survive configuration changes
+    // For now, simple remember is fine as it gets recreated with the screen.
     val playerManager = remember { PlayerManager(context) }
 
+    // Ensure player is released when the screen is disposed
     DisposableEffect(Unit) {
         onDispose {
             playerManager.releasePlayer()
@@ -90,7 +92,7 @@ fun TopicContentScreen(
                     Text("Error: ${uiState.error}")
                 }
             } else {
-                Crossfade(targetState = selectedTab, label = "content_type_tabs") { currentTab -> // Explicitly type currentTab
+                Crossfade(targetState = selectedTab, label = "content_type_tabs") { currentTab: ContentTab ->
                     when (currentTab) {
                         ContentTab.NOTES -> NotesList(uiState.notes, onNoteClick)
                         ContentTab.FAQS -> FaqsList(uiState.faqs)
@@ -154,6 +156,8 @@ fun AudioList(audioItems: List<AudioContent>, playerManager: PlayerManager) {
         }
     }
 }
+
+// --- Individual Item Composables ---
 
 @Composable
 fun NoteItemCard(note: Note, onClick: () -> Unit) {
@@ -279,6 +283,7 @@ fun OptionRow(prefix: String, text: String, isSelected: Boolean, showAsCorrect: 
     }
 }
 
+// THIS IS THE UPDATED AudioItemCard
 @Composable
 fun AudioItemCard(audio: AudioContent, playerManager: PlayerManager) {
     val currentPlayerData by playerManager.playerState.collectAsState()
