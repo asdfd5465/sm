@@ -13,15 +13,15 @@ class SavedStateViewModelFactory(private val repository: ContentRepository) : Vi
             @Suppress("UNCHECKED_CAST")
             return SubCategoryViewModel(repository, savedStateHandle) as T
         }
-        if (modelClass.isAssignableFrom(NoteListViewModel::class.java)) {
+        if (modelClass.isAssignableFrom(NoteListViewModel::class.java)) { // This should be TopicContentViewModel
             @Suppress("UNCHECKED_CAST")
-            return NoteListViewModel(repository, savedStateHandle) as T
+            return TopicContentViewModel(repository, savedStateHandle) as T // Changed
         }
         if (modelClass.isAssignableFrom(NoteDetailViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
             return NoteDetailViewModel(repository, savedStateHandle) as T
         }
-        if (modelClass.isAssignableFrom(TopicContentViewModel::class.java)) { // Add TopicContentViewModel
+        if (modelClass.isAssignableFrom(TopicContentViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
             return TopicContentViewModel(repository, savedStateHandle) as T
         }
