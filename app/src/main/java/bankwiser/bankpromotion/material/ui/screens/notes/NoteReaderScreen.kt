@@ -15,7 +15,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color // Import Color
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,7 +24,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.ui.viewmodel.NoteDetailViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.SavedStateViewModelFactory
-import bankwiser.bankpromotion.material.ui.viewmodel.NoteDetailUiState
+// NoteDetailUiState is defined within NoteDetailViewModel.kt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,9 +32,9 @@ fun NoteReaderScreen(
     onNavigateUp: () -> Unit
 ) {
     val context = LocalContext.current
-    val application = context.applicationContext as BankWiserApplication
+    val application = context.applicationContext as BankWiserApplication // Get application instance
     val repository = application.contentRepository
-    // Pass the application instance to the factory
+    // Pass application to the factory for UserPreferencesHelper instantiation
     val viewModel: NoteDetailViewModel = viewModel(
         factory = SavedStateViewModelFactory(repository, application)
     )
@@ -66,7 +66,11 @@ fun NoteReaderScreen(
                             )
                         }
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors( // Consistent TopAppBar styling
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         }
     ) { padding ->
