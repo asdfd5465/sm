@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.BookmarkBorder // For bookmark icon
+import androidx.compose.material.icons.outlined.RadioButtonUnchecked // For read status icon
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,16 +38,15 @@ fun TopicContentScreen(
     subCategoryName: String?
 ) {
     val context = LocalContext.current
-    val repository = (context.applicationContext as BankWiserApplication).contentRepository
-    val viewModel: TopicContentViewModel = viewModel(factory = SavedStateViewModelFactory(repository))
+    val application = context.applicationContext as BankWiserApplication // Get application instance
+    val repository = application.contentRepository
+    // Pass application to the factory for UserPreferencesHelper instantiation
+    val viewModel: TopicContentViewModel = viewModel(factory = SavedStateViewModelFactory(repository, application))
     val uiState by viewModel.uiState.collectAsState()
 
     var selectedTab by remember { mutableStateOf(ContentTab.NOTES) }
-    // Use rememberSavable for playerManager if you want it to survive configuration changes
-    // For now, simple remember is fine as it gets recreated with the screen.
     val playerManager = remember { PlayerManager(context) }
 
-    // Ensure player is released when the screen is disposed
     DisposableEffect(Unit) {
         onDispose {
             playerManager.releasePlayer()
@@ -107,13 +108,35 @@ fun TopicContentScreen(
 
 @Composable
 fun NotesList(notes: List<Note>, onNoteClick: (String) -> Unit) {
+    val context = LocalContext.current
+    // Get UserPreferencesHelper from Application context
+    val userPrefsHelper = (context.applicationContext as BankWiserApplication).userPreferencesHelper
+
     if (notes.isEmpty()) {
         EmptyContentMessage("No notes available for this topic yet.")
         return
     }
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         items(notes) { note ->
-            NoteItemCard(note = note, onClick = { onNoteClick(note.id) })
+            var isBookmarked by remember(note.id, userPrefsHelper.isNoteBookmarked(note.id)) {
+                mutableStateOf(userPrefsHelper.isNoteBookmarked(note.id))
+            }
+            var isRead by remember(note.id, userPrefsHelper.isNoteRead(note.id)) {
+                mutableStateOf(userPrefsHelper.isNoteRead(note.id))
+            }
+
+            NoteItemCard(
+                note = note,
+                isBookmarked = isBookmarked,
+                isRead = isRead,
+                onClick = { onNoteClick(note.id) },
+                onBookmarkToggle = {
+                    isBookmarked = userPrefsHelper.toggleNoteBookmark(note.id)
+                },
+                onReadToggle = {
+                    isRead = userPrefsHelper.toggleNoteReadStatus(note.id)
+                }
+            )
         }
     }
 }
@@ -127,6 +150,7 @@ fun FaqsList(faqs: List<Faq>) {
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         items(faqs) { faq ->
             FaqItem(faq = faq)
+            // TODO: Add bookmark/read icons for FAQs later
         }
     }
 }
@@ -140,6 +164,7 @@ fun McqsList(mcqs: List<Mcq>) {
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         items(mcqs) { mcq ->
             McqItem(mcq = mcq)
+            // TODO: Add bookmark icons for MCQs later
         }
     }
 }
@@ -153,6 +178,7 @@ fun AudioList(audioItems: List<AudioContent>, playerManager: PlayerManager) {
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         items(audioItems) { audio ->
             AudioItemCard(audio = audio, playerManager = playerManager)
+            // TODO: Add bookmark icons for Audio later
         }
     }
 }
@@ -160,7 +186,14 @@ fun AudioList(audioItems: List<AudioContent>, playerManager: PlayerManager) {
 // --- Individual Item Composables ---
 
 @Composable
-fun NoteItemCard(note: Note, onClick: () -> Unit) {
+fun NoteItemCard(
+    note: Note,
+    isBookmarked: Boolean,
+    isRead: Boolean,
+    onClick: () -> Unit,
+    onBookmarkToggle: () -> Unit,
+    onReadToggle: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -169,7 +202,35 @@ fun NoteItemCard(note: Note, onClick: () -> Unit) {
         shape = MaterialTheme.shapes.large
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(note.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = note.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                Row {
+                    IconButton(onClick = onBookmarkToggle, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                            contentDescription = "Bookmark",
+                            tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    IconButton(onClick = onReadToggle, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            imageVector = if (isRead) Icons.Filled.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                            contentDescription = "Mark as Read",
+                            tint = if (isRead) Color.Green.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 note.body,
@@ -283,11 +344,9 @@ fun OptionRow(prefix: String, text: String, isSelected: Boolean, showAsCorrect: 
     }
 }
 
-// THIS IS THE UPDATED AudioItemCard
 @Composable
 fun AudioItemCard(audio: AudioContent, playerManager: PlayerManager) {
     val currentPlayerData by playerManager.playerState.collectAsState()
-    // Check if this specific audio item is the one currently playing or cued.
     val isThisAudioActive = currentPlayerData.currentPlayingUrl == audio.audioUrl
     val isPlayingThisAudio = isThisAudioActive && currentPlayerData.isActuallyPlaying
 
@@ -323,7 +382,6 @@ fun AudioItemCard(audio: AudioContent, playerManager: PlayerManager) {
                     )
                 }
             }
-            // Show error message only if this specific audio item encountered an error
             if (isThisAudioActive && currentPlayerData.error != null) {
                 Text(
                     text = "Error: ${currentPlayerData.error}",

@@ -5,12 +5,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -19,6 +24,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.ui.viewmodel.NoteDetailViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.SavedStateViewModelFactory
+// NoteDetailUiState is defined within NoteDetailViewModel.kt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,53 +32,78 @@ fun NoteReaderScreen(
     onNavigateUp: () -> Unit
 ) {
     val context = LocalContext.current
-    val repository = (context.applicationContext as BankWiserApplication).contentRepository
-    val viewModel: NoteDetailViewModel = viewModel(factory = SavedStateViewModelFactory(repository))
-    val note by viewModel.note.collectAsState()
+    val application = context.applicationContext as BankWiserApplication // Get application instance
+    val repository = application.contentRepository
+    // Pass application to the factory for UserPreferencesHelper instantiation
+    val viewModel: NoteDetailViewModel = viewModel(
+        factory = SavedStateViewModelFactory(repository, application)
+    )
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(note?.title ?: "Note", maxLines = 1) },
+                title = { Text(uiState.note?.title ?: "Note", maxLines = 1) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
+                actions = {
+                    if (uiState.note != null) {
+                        IconButton(onClick = { viewModel.toggleBookmark() }) {
+                            Icon(
+                                imageVector = if (uiState.isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                                contentDescription = "Bookmark",
+                                tint = if (uiState.isBookmarked) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                            )
+                        }
+                        IconButton(onClick = { viewModel.toggleReadStatus() }) {
+                            Icon(
+                                imageVector = if (uiState.isRead) Icons.Filled.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                                contentDescription = "Mark as Read",
+                                tint = if (uiState.isRead) Color.Green.copy(alpha = 0.7f) else LocalContentColor.current
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors( // Consistent TopAppBar styling
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-        ) {
-            note?.let {
+        if (uiState.isLoading) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (uiState.error != null) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Text("Error: ${uiState.error}")
+            }
+        } else {
+            uiState.note?.let { note ->
                 Column(
                     modifier = Modifier
+                        .padding(padding)
                         .padding(16.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
                     Text(
-                        text = it.title,
+                        text = note.title,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
                     Divider(modifier = Modifier.padding(vertical = 16.dp))
                     Text(
-                        text = it.body,
+                        text = note.body,
                         style = MaterialTheme.typography.bodyLarge,
-                        lineHeight = 28.sp // Improved readability as per mockup
+                        lineHeight = 28.sp
                     )
                 }
-            } ?: run {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
+            } ?: Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Text("Note not found.")
             }
         }
     }

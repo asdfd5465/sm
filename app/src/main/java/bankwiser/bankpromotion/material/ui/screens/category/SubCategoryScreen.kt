@@ -23,12 +23,16 @@ import bankwiser.bankpromotion.material.ui.viewmodel.SubCategoryViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubCategoryScreen(
-    onSubCategoryClick: (subCategoryId: String) -> Unit,
+    onSubCategoryClick: (subCategoryId: String, subCategoryName: String) -> Unit, // Pass name too
     onNavigateUp: () -> Unit
 ) {
     val context = LocalContext.current
-    val repository = (context.applicationContext as BankWiserApplication).contentRepository
-    val viewModel: SubCategoryViewModel = viewModel(factory = SavedStateViewModelFactory(repository))
+    val application = context.applicationContext as BankWiserApplication // Get application instance
+    val repository = application.contentRepository
+    // Pass application to the factory
+    val viewModel: SubCategoryViewModel = viewModel(
+        factory = SavedStateViewModelFactory(repository, application)
+    )
     val subCategories by viewModel.subCategories.collectAsState()
 
     Scaffold(
@@ -53,7 +57,9 @@ fun SubCategoryScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(subCategories) { subCategory ->
-                TopicCard(subCategory = subCategory, onClick = { onSubCategoryClick(subCategory.id) })
+                TopicCard(subCategory = subCategory, onClick = {
+                    onSubCategoryClick(subCategory.id, subCategory.name) // Pass name
+                })
             }
         }
     }
@@ -74,13 +80,11 @@ fun TopicCard(subCategory: SubCategory, onClick: () -> Unit) {
                 text = subCategory.name,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
-                // 'color' parameter removed
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Notes & MCQs Available",
+                text = "Notes, FAQs, MCQs & Audio", // Updated placeholder
                 style = MaterialTheme.typography.bodySmall
-                // 'color' parameter removed
             )
         }
     }

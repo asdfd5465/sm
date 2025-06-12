@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavHostController // <<< IMPORT ADDED HERE
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -30,6 +30,8 @@ import bankwiser.bankpromotion.material.ui.screens.onboarding.OnboardingScreen
 import bankwiser.bankpromotion.material.ui.screens.search.SearchScreen
 import bankwiser.bankpromotion.material.ui.screens.splash.SplashScreen
 import bankwiser.bankpromotion.material.ui.screens.topic.TopicContentScreen
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 object Routes {
     const val SPLASH = "splash"
@@ -38,19 +40,21 @@ object Routes {
     const val MAIN_APP_GRAPH = "main_app_graph"
     const val HOME = "home"
     const val SEARCH = "search"
-    // Route for the temporary SubCategory list screen inside MainAppScaffold
     const val SUB_CATEGORY_LIST = "subcategories_list/{categoryId}"
-    const val TOPIC_CONTENT = "topic_content/{subCategoryId}/{subCategoryName}"
+    const val TOPIC_CONTENT = "topic_content/{subCategoryId}/{subCategoryName}" // Name included in route
     const val NOTEREADER = "notereader/{noteId}"
 
     fun subCategoryList(categoryId: String) = "subcategories_list/$categoryId"
-    fun topicContent(subCategoryId: String, subCategoryName: String) = "topic_content/$subCategoryId/$subCategoryName"
+    fun topicContent(subCategoryId: String, subCategoryName: String): String {
+        val encodedName = URLEncoder.encode(subCategoryName, StandardCharsets.UTF_8.toString())
+        return "topic_content/$subCategoryId/$encodedName"
+    }
     fun noteReader(noteId: String) = "notereader/$noteId"
 }
 
 @Composable
 fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
-    val appNavController = rememberNavController() // This is the top-level NavController
+    val appNavController = rememberNavController()
     val authState by authViewModel.authState.collectAsState()
 
     LaunchedEffect(authState.user) {
@@ -90,18 +94,14 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
         composable(Routes.MAIN_APP_GRAPH) {
             MainAppScaffold(authViewModel = authViewModel, appNavController = appNavController)
         }
-        // These routes are navigated to by appNavController from within MainAppScaffold's nested NavHost items
-         composable(
+        composable(
             route = Routes.SUB_CATEGORY_LIST,
             arguments = listOf(navArgument("categoryId") { type = NavType.StringType })
         ){
-            SubCategoryScreen( // This screen will use appNavController for its next navigation
-                onSubCategoryClick = { subCategoryId ->
-                    // Here, we need to get subCategoryName. For now, a placeholder.
-                    // This navigation should be done by the appNavController passed to SubCategoryScreen
-                    // or by having SubCategoryScreen accept appNavController as a parameter.
-                    // For Phase 4, let's make SubCategoryScreen navigate directly.
-                    appNavController.navigate(Routes.topicContent(subCategoryId, "Topic Details"))
+            SubCategoryScreen(
+                onSubCategoryClick = { subCategoryId, subCategoryName -> // Receive name
+                    // Navigate using appNavController to TopicContentScreen
+                    appNavController.navigate(Routes.topicContent(subCategoryId, subCategoryName))
                 },
                 onNavigateUp = { appNavController.navigateUp() }
             )
@@ -110,13 +110,14 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
             route = Routes.TOPIC_CONTENT,
             arguments = listOf(
                 navArgument("subCategoryId") { type = NavType.StringType },
-                navArgument("subCategoryName") { type = NavType.StringType }
+                navArgument("subCategoryName") { type = NavType.StringType } // Define arg for name
             )
         ) { backStackEntry ->
+            val subCategoryName = backStackEntry.arguments?.getString("subCategoryName") ?: "Topic"
             TopicContentScreen(
                 onNoteClick = { noteId -> appNavController.navigate(Routes.noteReader(noteId)) },
                 onNavigateUp = { appNavController.navigateUp() },
-                subCategoryName = backStackEntry.arguments?.getString("subCategoryName")
+                subCategoryName = subCategoryName // Pass the name
             )
         }
         composable(
@@ -131,7 +132,7 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
 
 @Composable
 fun MainAppScaffold(authViewModel: AuthViewModel, appNavController: NavHostController) {
-    val bottomBarNavController = rememberNavController() // Separate NavController for Bottom Bar items
+    val bottomBarNavController = rememberNavController()
     val items = listOf(
         BottomNavItem.Home,
         BottomNavItem.Search
@@ -158,28 +159,22 @@ fun MainAppScaffold(authViewModel: AuthViewModel, appNavController: NavHostContr
             }
         }
     ) { innerPadding ->
-        // NavHost for the content area controlled by the Bottom Navigation Bar
         NavHost(bottomBarNavController, startDestination = Routes.HOME, Modifier.padding(innerPadding)) {
             composable(Routes.HOME) {
                 HomeScreen(
                     authViewModel = authViewModel,
                     onCategoryClick = { categoryId ->
-                        // When a category is clicked, use the appNavController to go to the SubCategory list
                         appNavController.navigate(Routes.subCategoryList(categoryId))
                     },
-                    onSignOut = {
-                        // AuthViewModel's state change triggers navigation via LaunchedEffect in AppNavigation
-                    }
+                    onSignOut = { /* Handled by LaunchedEffect in AppNavigation */ }
                 )
             }
             composable(Routes.SEARCH) {
                  SearchScreen(
-                    onNavigateUp = { /* Search is a root tab, up navigation might not be standard */ },
+                    onNavigateUp = { /* Root tab, no specific up navigation from here */ },
                     onNoteClick = { noteId -> appNavController.navigate(Routes.noteReader(noteId))}
                 )
             }
-            // Note: TOPIC_CONTENT and NOTEREADER are NOT part of this bottomBarNavController's graph.
-            // They are part of the appNavController's graph and will be displayed over this entire scaffold.
         }
     }
 }
