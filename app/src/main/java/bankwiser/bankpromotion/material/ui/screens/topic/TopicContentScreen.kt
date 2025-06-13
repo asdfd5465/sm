@@ -36,9 +36,17 @@ import bankwiser.bankpromotion.material.ui.viewmodel.TopicContentViewModel
 enum class ContentTab { NOTES, FAQS, MCQS, AUDIO }
 
 // Moved helper function to be accessible by SearchScreen as well
-fun isContentAccessible(isFreeLaunch: Boolean, isPremiumContent: Boolean, hasSubscription: Boolean): Boolean {
-    if (isFreeLaunch) return true
-    return if (isPremiumContent) hasSubscription else true
+// CORRECTED Helper function to check content accessibility
+fun isContentAccessible(isFreeLaunch: Boolean, isPremiumContent: Boolean, hasUserSubscribed: Boolean): Boolean {
+    if (isFreeLaunch) { // Rule 1: Free launch content is always accessible
+        return true
+    }
+    // If not free launch content, then check premium status
+    return if (isPremiumContent) { // Rule 2a: If premium, user needs subscription
+        hasUserSubscribed
+    } else { // Rule 2b: If not premium (and not free launch), it's regular free content
+        true
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
