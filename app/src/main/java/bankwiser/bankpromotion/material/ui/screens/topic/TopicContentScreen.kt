@@ -134,8 +134,8 @@ fun TopicContentScreen(
 fun PremiumLockedOverlay(onClickAction: () -> Unit) {
     Box(
         modifier = Modifier
-            .fillMaxSize() // This will make the overlay fill its parent (the Card's Box)
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+            .fillMaxSize() // This will make the overlay fill its parent (the Card's Box) alpha for transparency
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)) 
             .clickable(onClick = onClickAction),
         contentAlignment = Alignment.Center
     ) {
