@@ -5,5 +5,7 @@ data class AudioContent(
     val title: String,
     val audioUrl: String,
     val durationSeconds: Int?,
-    val subCategoryId: String? // Or categoryId
+    val subCategoryId: String?,
+    val isFreeLaunchContent: Boolean, // Added
+    val isPremium: Boolean          // Added
 )

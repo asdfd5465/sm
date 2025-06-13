@@ -7,6 +7,8 @@ data class Mcq(
     val optionB: String,
     val optionC: String,
     val optionD: String,
-    val correctOption: String, // "A", "B", "C", or "D"
-    val subCategoryId: String? // Or categoryId
+    val correctOption: String,
+    val subCategoryId: String?,
+    val isFreeLaunchContent: Boolean, // Added
+    val isPremium: Boolean          // Added
 )

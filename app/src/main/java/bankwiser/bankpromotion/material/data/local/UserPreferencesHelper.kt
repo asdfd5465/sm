@@ -13,9 +13,19 @@ class UserPreferencesHelper(context: Context) {
         private const val BOOKMARKED_FAQS_PREFIX = "bookmarked_faq_"
         private const val BOOKMARKED_MCQS_PREFIX = "bookmarked_mcq_"
         private const val BOOKMARKED_AUDIO_PREFIX = "bookmarked_audio_"
-        // private const val READ_NOTES_PREFIX = "read_note_" // Removed
+        private const val IS_SUBSCRIBED_KEY = "is_user_subscribed" // New key
     }
 
+    // --- Subscription Status (Simulated) --- todo Phase 6
+    fun isUserSubscribed(): Boolean {
+        // In a debug build, you could override this with BuildConfig.FORCE_SUBSCRIBED_DEBUG
+        return prefs.getBoolean(IS_SUBSCRIBED_KEY, false) // Default to not subscribed
+    }
+
+    fun setUserSubscribed(isSubscribed: Boolean) {
+        prefs.edit().putBoolean(IS_SUBSCRIBED_KEY, isSubscribed).apply()
+    }
+    
     // --- Generic Bookmark Functions ---
     private fun isBookmarked(itemId: String, prefix: String): Boolean {
         return prefs.getBoolean(prefix + itemId, false)
@@ -47,20 +57,6 @@ class UserPreferencesHelper(context: Context) {
     fun isAudioBookmarked(audioId: String): Boolean = isBookmarked(audioId, BOOKMARKED_AUDIO_PREFIX)
     fun toggleAudioBookmark(audioId: String): Boolean = toggleBookmark(audioId, BOOKMARKED_AUDIO_PREFIX)
 
-
-    // --- Read Status for Notes (REMOVED) ---
-    // fun isNoteRead(noteId: String): Boolean {
-    //     return prefs.getBoolean(READ_NOTES_PREFIX + noteId, false)
-    // }
-    // fun setNoteRead(noteId: String, isRead: Boolean) {
-    //     prefs.edit().putBoolean(READ_NOTES_PREFIX + noteId, isRead).apply()
-    // }
-    // fun toggleNoteReadStatus(noteId: String): Boolean {
-    //     val currentStatus = isNoteRead(noteId)
-    //     setNoteRead(noteId, !currentStatus)
-    //     return !currentStatus
-    // }
-
     // --- Get All Bookmarked IDs (Example for potential future use) ---
     fun getAllBookmarkedItemIds(prefix: String): Set<String> {
         return prefs.all.keys
@@ -68,10 +64,4 @@ class UserPreferencesHelper(context: Context) {
             .map { it.removePrefix(prefix) }
             .toSet()
     }
-    // fun getAllReadNoteIds(): Set<String> { // Removed
-    //     return prefs.all.keys
-    //         .filter { it.startsWith(READ_NOTES_PREFIX) && prefs.getBoolean(it, false) }
-    //         .map { it.removePrefix(READ_NOTES_PREFIX) }
-    //         .toSet()
-    // }
 }

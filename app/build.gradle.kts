@@ -43,8 +43,8 @@ android {
         applicationId = "bankwiser.bankpromotion.material"
         minSdk = 26
         targetSdk = 34
-        versionCode = 5
-        versionName = "1.5"
+        versionCode = 6
+        versionName = "1.6"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -113,4 +113,7 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer:1.3.1")
     implementation("androidx.media3:media3-ui:1.3.1")
     implementation("androidx.media3:media3-session:1.3.1")
+    
+    // Google Play Billing Library
+    implementation("com.android.billingclient:billing-ktx:6.2.0") // Or latest version
 }
