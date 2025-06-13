@@ -1,5 +1,6 @@
 package bankwiser.bankpromotion.material.ui.screens.home
 
+import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,27 +25,31 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.R
-import bankwiser.bankpromotion.material.auth.AuthViewModel // Assuming AuthViewModel is accessible
+import bankwiser.bankpromotion.material.auth.AuthViewModel
 import bankwiser.bankpromotion.material.data.model.Category
 import bankwiser.bankpromotion.material.ui.theme.*
 import bankwiser.bankpromotion.material.ui.viewmodel.HomeViewModel
+import bankwiser.bankpromotion.material.ui.viewmodel.SubscriptionViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.firebase.auth.FirebaseUser // Import FirebaseUser
+import com.google.firebase.auth.FirebaseUser
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onCategoryClick: (categoryId: String) -> Unit,
     onSignOut: () -> Unit,
-    authViewModel: AuthViewModel = viewModel()
+    authViewModel: AuthViewModel = viewModel(),
+    subscriptionViewModel: SubscriptionViewModel = viewModel() // Add SubscriptionViewModel
 ) {
     val context = LocalContext.current
-    val repository = (context.applicationContext as BankWiserApplication).contentRepository
+    val application = context.applicationContext as BankWiserApplication
+    val repository = application.contentRepository
     val homeViewModel: HomeViewModel = viewModel(factory = ViewModelFactory(repository))
     val categories by homeViewModel.categories.collectAsState()
-    val authState by authViewModel.authState.collectAsState() // Get auth state
+    val authState by authViewModel.authState.collectAsState()
+    val hasPremiumAccess by subscriptionViewModel.hasPremiumAccess.collectAsState() // Observe premium access
 
     val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
         .requestIdToken(stringResource(id = R.string.default_web_client_id))
@@ -55,7 +60,7 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             HomeHeader(
-                user = authState.user, // Pass the user object
+                user = authState.user,
                 onSignOutClick = {
                     authViewModel.signOut(googleSignInClient)
                     onSignOut()
@@ -63,13 +68,28 @@ fun HomeScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier.padding(padding),
-            contentPadding = PaddingValues(all = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(categories) { category ->
-                CategoryCard(category = category, onClick = { onCategoryClick(category.id) })
+        Column(modifier = Modifier.padding(padding)) { // Wrap LazyColumn and Button in a Column
+            // Temporary button to simulate subscription
+            Button(
+                onClick = {
+                    val currentSimulatedStatus = application.userPreferencesHelper.isUserSubscribed()
+                    subscriptionViewModel.setSimulatedSubscription(!currentSimulatedStatus)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text(if (hasPremiumAccess) "Simulate Unsubscribe" else "Simulate Subscribe")
+            }
+
+            LazyColumn(
+                // modifier = Modifier.padding(padding), // Padding is now on the parent Column
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), // Adjust padding
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(categories) { category ->
+                    CategoryCard(category = category, onClick = { onCategoryClick(category.id) })
+                }
             }
         }
     }
@@ -77,14 +97,13 @@ fun HomeScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeHeader(user: FirebaseUser?, onSignOutClick: () -> Unit) { // Accept FirebaseUser
-    val userName = user?.displayName?.substringBefore(" ") ?: "User" // Get first name or "User"
+fun HomeHeader(user: FirebaseUser?, onSignOutClick: () -> Unit) {
+    val userName = user?.displayName?.substringBefore(" ") ?: "User"
 
     TopAppBar(
         title = {
             Column {
                 Text(
-                    // Display user's first name if available
                     text = "Welcome back, $userName! 👋",
                     style = MaterialTheme.typography.titleLarge,
                     color = TextOnPrimary,
@@ -121,7 +140,6 @@ fun HomeHeader(user: FirebaseUser?, onSignOutClick: () -> Unit) { // Accept Fire
     )
 }
 
-// CategoryCard and getIconForCategory remain the same
 @Composable
 fun CategoryCard(category: Category, onClick: () -> Unit) {
     Card(
@@ -149,7 +167,7 @@ fun CategoryCard(category: Category, onClick: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Notes, MCQs, & More", // Placeholder meta text
+                    text = "Notes, MCQs, & More",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
