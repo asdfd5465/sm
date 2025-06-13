@@ -14,7 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color // <<< IMPORT ADDED HERE
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -24,13 +24,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.R
-import bankwiser.bankpromotion.material.auth.AuthViewModel
+import bankwiser.bankpromotion.material.auth.AuthViewModel // Assuming AuthViewModel is accessible
 import bankwiser.bankpromotion.material.data.model.Category
 import bankwiser.bankpromotion.material.ui.theme.*
 import bankwiser.bankpromotion.material.ui.viewmodel.HomeViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.firebase.auth.FirebaseUser // Import FirebaseUser
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +44,7 @@ fun HomeScreen(
     val repository = (context.applicationContext as BankWiserApplication).contentRepository
     val homeViewModel: HomeViewModel = viewModel(factory = ViewModelFactory(repository))
     val categories by homeViewModel.categories.collectAsState()
+    val authState by authViewModel.authState.collectAsState() // Get auth state
 
     val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
         .requestIdToken(stringResource(id = R.string.default_web_client_id))
@@ -52,10 +54,13 @@ fun HomeScreen(
 
     Scaffold(
         topBar = {
-            HomeHeader(onSignOutClick = {
-                authViewModel.signOut(googleSignInClient)
-                onSignOut()
-            })
+            HomeHeader(
+                user = authState.user, // Pass the user object
+                onSignOutClick = {
+                    authViewModel.signOut(googleSignInClient)
+                    onSignOut()
+                }
+            )
         }
     ) { padding ->
         LazyColumn(
@@ -72,12 +77,15 @@ fun HomeScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeHeader(onSignOutClick: () -> Unit) {
+fun HomeHeader(user: FirebaseUser?, onSignOutClick: () -> Unit) { // Accept FirebaseUser
+    val userName = user?.displayName?.substringBefore(" ") ?: "User" // Get first name or "User"
+
     TopAppBar(
         title = {
             Column {
                 Text(
-                    text = "Welcome back! 👋",
+                    // Display user's first name if available
+                    text = "Welcome back, $userName! 👋",
                     style = MaterialTheme.typography.titleLarge,
                     color = TextOnPrimary,
                     fontWeight = FontWeight.Bold
@@ -97,7 +105,7 @@ fun HomeHeader(onSignOutClick: () -> Unit) {
                 )
             ),
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.Transparent, // Make TopAppBar transparent to show gradient
+            containerColor = Color.Transparent,
             titleContentColor = TextOnPrimary,
             actionIconContentColor = TextOnPrimary
         ),
@@ -113,6 +121,7 @@ fun HomeHeader(onSignOutClick: () -> Unit) {
     )
 }
 
+// CategoryCard and getIconForCategory remain the same
 @Composable
 fun CategoryCard(category: Category, onClick: () -> Unit) {
     Card(
@@ -140,7 +149,7 @@ fun CategoryCard(category: Category, onClick: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Notes, MCQs, & More",
+                    text = "Notes, MCQs, & More", // Placeholder meta text
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -158,10 +167,11 @@ fun getIconForCategory(id: String): String {
     }
 }
 
+
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
     BankWiserProTheme {
-        HomeScreen(onCategoryClick = {}, onSignOut = {})
+        HomeScreen(onCategoryClick = {}, onSignOut = {}, authViewModel = AuthViewModel())
     }
 }
