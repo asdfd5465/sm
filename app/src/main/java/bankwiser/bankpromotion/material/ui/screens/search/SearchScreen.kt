@@ -1,5 +1,6 @@
 package bankwiser.bankpromotion.material.ui.screens.search
 
+import android.app.Activity
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,13 +15,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
+import bankwiser.bankpromotion.material.billing.PREMIUM_SUBSCRIPTION_ID
 import bankwiser.bankpromotion.material.player.PlayerManager
 import bankwiser.bankpromotion.material.ui.screens.topic.AudioItemCard
 import bankwiser.bankpromotion.material.ui.screens.topic.FaqItem
 import bankwiser.bankpromotion.material.ui.screens.topic.McqItem
 import bankwiser.bankpromotion.material.ui.screens.topic.NoteItemCard
 import bankwiser.bankpromotion.material.ui.viewmodel.SearchViewModel
+import bankwiser.bankpromotion.material.ui.viewmodel.SubscriptionViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
+import bankwiser.bankpromotion.material.ui.screens.topic.isContentAccessible // Import helper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,18 +36,21 @@ fun SearchScreen(
     val application = context.applicationContext as BankWiserApplication
     val repository = application.contentRepository
     val userPrefsHelper = application.userPreferencesHelper
-    val viewModel: SearchViewModel = viewModel(factory = ViewModelFactory(repository))
-    val uiState by viewModel.uiState.collectAsState()
+    val searchViewModel: SearchViewModel = viewModel(factory = ViewModelFactory(repository))
+    val subscriptionViewModel: SubscriptionViewModel = viewModel() // For subscription status
+    
+    val uiState by searchViewModel.uiState.collectAsState()
+    val hasPremiumAccess by subscriptionViewModel.hasPremiumAccess.collectAsState()
     var searchQuery by remember { mutableStateOf(uiState.query) }
 
     LaunchedEffect(searchQuery) {
-        viewModel.onSearchQueryChanged(searchQuery)
+        searchViewModel.onSearchQueryChanged(searchQuery)
     }
 
     val effectiveOnNavigateUp = if (uiState.initialScreen && uiState.query.isBlank()) {
         onNavigateUp
     } else if (uiState.query.isNotBlank()) {
-        { searchQuery = "" } // Clear search query on back press if there's a query
+        { searchQuery = "" } 
     } else {
         onNavigateUp
     }
@@ -73,7 +80,7 @@ fun SearchScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors( // Added for consistency
+                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
                     navigationIconContentColor = MaterialTheme.colorScheme.onSurface
@@ -83,17 +90,11 @@ fun SearchScreen(
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
             if (uiState.isLoading && !uiState.initialScreen) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             } else if (uiState.noResults && !uiState.initialScreen) {
-                Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
-                    Text("No results found for \"${uiState.query}\"")
-                }
+                Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) { Text("No results found for \"${uiState.query}\"") }
             } else if (uiState.initialScreen && uiState.query.isBlank()){
-                 Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
-                    Text("Type to search content.")
-                }
+                 Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) { Text("Type to search content.") }
             }
             else {
                 val playerManager = remember { PlayerManager(context) }
@@ -109,13 +110,16 @@ fun SearchScreen(
                             var isBookmarked by remember(note.id, userPrefsHelper.isNoteBookmarked(note.id)) {
                                 mutableStateOf(userPrefsHelper.isNoteBookmarked(note.id))
                             }
-                            NoteItemCard( // Corrected: Removed isRead and onReadToggle
+                            val accessible = isContentAccessible(note.isFreeLaunchContent, note.isPremium, hasPremiumAccess)
+                            NoteItemCard(
                                 note = note,
                                 isBookmarked = isBookmarked,
-                                onClick = { onNoteClick(note.id) },
-                                onBookmarkToggle = {
-                                    isBookmarked = userPrefsHelper.toggleNoteBookmark(note.id)
-                                }
+                                onClick = { 
+                                    if (accessible) onNoteClick(note.id) 
+                                    else subscriptionViewModel.launchPurchaseFlow(context as Activity, subscriptionViewModel.premiumProductDetails.value)
+                                },
+                                onBookmarkToggle = { isBookmarked = userPrefsHelper.toggleNoteBookmark(note.id) },
+                                isLocked = !accessible // Pass isLocked
                             )
                         }
                     }
@@ -125,12 +129,13 @@ fun SearchScreen(
                             var isBookmarked by remember(faq.id, userPrefsHelper.isFaqBookmarked(faq.id)) {
                                 mutableStateOf(userPrefsHelper.isFaqBookmarked(faq.id))
                             }
+                             val accessible = isContentAccessible(faq.isFreeLaunchContent, faq.isPremium, hasPremiumAccess)
                             FaqItem(
                                 faq = faq,
                                 isBookmarked = isBookmarked,
-                                onBookmarkToggle = {
-                                    isBookmarked = userPrefsHelper.toggleFaqBookmark(faq.id)
-                                }
+                                onBookmarkToggle = { isBookmarked = userPrefsHelper.toggleFaqBookmark(faq.id) },
+                                isLocked = !accessible, // Pass isLocked
+                                onLockedItemClick = { subscriptionViewModel.launchPurchaseFlow(context as Activity, subscriptionViewModel.premiumProductDetails.value) } // Pass onLockedItemClick
                             )
                         }
                     }
@@ -140,12 +145,13 @@ fun SearchScreen(
                             var isBookmarked by remember(mcq.id, userPrefsHelper.isMcqBookmarked(mcq.id)) {
                                 mutableStateOf(userPrefsHelper.isMcqBookmarked(mcq.id))
                             }
+                            val accessible = isContentAccessible(mcq.isFreeLaunchContent, mcq.isPremium, hasPremiumAccess)
                             McqItem(
                                 mcq = mcq,
                                 isBookmarked = isBookmarked,
-                                onBookmarkToggle = {
-                                    isBookmarked = userPrefsHelper.toggleMcqBookmark(mcq.id)
-                                }
+                                onBookmarkToggle = { isBookmarked = userPrefsHelper.toggleMcqBookmark(mcq.id) },
+                                isLocked = !accessible, // Pass isLocked
+                                onLockedItemClick = { subscriptionViewModel.launchPurchaseFlow(context as Activity, subscriptionViewModel.premiumProductDetails.value) } // Pass onLockedItemClick
                             )
                         }
                     }
@@ -155,13 +161,14 @@ fun SearchScreen(
                             var isBookmarked by remember(audio.id, userPrefsHelper.isAudioBookmarked(audio.id)) {
                                 mutableStateOf(userPrefsHelper.isAudioBookmarked(audio.id))
                             }
+                            val accessible = isContentAccessible(audio.isFreeLaunchContent, audio.isPremium, hasPremiumAccess)
                             AudioItemCard(
                                 audio = audio,
                                 playerManager = playerManager,
                                 isBookmarked = isBookmarked,
-                                onBookmarkToggle = {
-                                    isBookmarked = userPrefsHelper.toggleAudioBookmark(audio.id)
-                                }
+                                onBookmarkToggle = { isBookmarked = userPrefsHelper.toggleAudioBookmark(audio.id) },
+                                isLocked = !accessible, // Pass isLocked
+                                onLockedItemClick = { subscriptionViewModel.launchPurchaseFlow(context as Activity, subscriptionViewModel.premiumProductDetails.value) } // Pass onLockedItemClick
                             )
                         }
                     }
