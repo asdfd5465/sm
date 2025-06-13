@@ -10,8 +10,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.BookmarkBorder // For bookmark icon
-import androidx.compose.material.icons.outlined.RadioButtonUnchecked // For read status icon
+import androidx.compose.material.icons.outlined.BookmarkBorder
+// import androidx.compose.material.icons.outlined.RadioButtonUnchecked // No longer needed here
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,9 +38,8 @@ fun TopicContentScreen(
     subCategoryName: String?
 ) {
     val context = LocalContext.current
-    val application = context.applicationContext as BankWiserApplication // Get application instance
+    val application = context.applicationContext as BankWiserApplication
     val repository = application.contentRepository
-    // Pass application to the factory for UserPreferencesHelper instantiation
     val viewModel: TopicContentViewModel = viewModel(factory = SavedStateViewModelFactory(repository, application))
     val uiState by viewModel.uiState.collectAsState()
 
@@ -61,7 +60,12 @@ fun TopicContentScreen(
                     IconButton(onClick = onNavigateUp) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         }
     ) { paddingValues ->
@@ -109,7 +113,6 @@ fun TopicContentScreen(
 @Composable
 fun NotesList(notes: List<Note>, onNoteClick: (String) -> Unit) {
     val context = LocalContext.current
-    // Get UserPreferencesHelper from Application context
     val userPrefsHelper = (context.applicationContext as BankWiserApplication).userPreferencesHelper
 
     if (notes.isEmpty()) {
@@ -121,20 +124,12 @@ fun NotesList(notes: List<Note>, onNoteClick: (String) -> Unit) {
             var isBookmarked by remember(note.id, userPrefsHelper.isNoteBookmarked(note.id)) {
                 mutableStateOf(userPrefsHelper.isNoteBookmarked(note.id))
             }
-            var isRead by remember(note.id, userPrefsHelper.isNoteRead(note.id)) {
-                mutableStateOf(userPrefsHelper.isNoteRead(note.id))
-            }
-
             NoteItemCard(
                 note = note,
                 isBookmarked = isBookmarked,
-                isRead = isRead,
                 onClick = { onNoteClick(note.id) },
                 onBookmarkToggle = {
                     isBookmarked = userPrefsHelper.toggleNoteBookmark(note.id)
-                },
-                onReadToggle = {
-                    isRead = userPrefsHelper.toggleNoteReadStatus(note.id)
                 }
             )
         }
@@ -143,42 +138,73 @@ fun NotesList(notes: List<Note>, onNoteClick: (String) -> Unit) {
 
 @Composable
 fun FaqsList(faqs: List<Faq>) {
-     if (faqs.isEmpty()) {
+    val context = LocalContext.current
+    val userPrefsHelper = (context.applicationContext as BankWiserApplication).userPreferencesHelper
+    if (faqs.isEmpty()) {
         EmptyContentMessage("No FAQs available for this topic yet.")
         return
     }
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         items(faqs) { faq ->
-            FaqItem(faq = faq)
-            // TODO: Add bookmark/read icons for FAQs later
+            var isBookmarked by remember(faq.id, userPrefsHelper.isFaqBookmarked(faq.id)) {
+                mutableStateOf(userPrefsHelper.isFaqBookmarked(faq.id))
+            }
+            FaqItem(
+                faq = faq,
+                isBookmarked = isBookmarked,
+                onBookmarkToggle = {
+                    isBookmarked = userPrefsHelper.toggleFaqBookmark(faq.id)
+                }
+            )
         }
     }
 }
 
 @Composable
 fun McqsList(mcqs: List<Mcq>) {
+    val context = LocalContext.current
+    val userPrefsHelper = (context.applicationContext as BankWiserApplication).userPreferencesHelper
     if (mcqs.isEmpty()) {
         EmptyContentMessage("No MCQs available for this topic yet.")
         return
     }
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         items(mcqs) { mcq ->
-            McqItem(mcq = mcq)
-            // TODO: Add bookmark icons for MCQs later
+             var isBookmarked by remember(mcq.id, userPrefsHelper.isMcqBookmarked(mcq.id)) {
+                mutableStateOf(userPrefsHelper.isMcqBookmarked(mcq.id))
+            }
+            McqItem(
+                mcq = mcq,
+                isBookmarked = isBookmarked,
+                onBookmarkToggle = {
+                    isBookmarked = userPrefsHelper.toggleMcqBookmark(mcq.id)
+                }
+            )
         }
     }
 }
 
 @Composable
 fun AudioList(audioItems: List<AudioContent>, playerManager: PlayerManager) {
-     if (audioItems.isEmpty()) {
+    val context = LocalContext.current
+    val userPrefsHelper = (context.applicationContext as BankWiserApplication).userPreferencesHelper
+    if (audioItems.isEmpty()) {
         EmptyContentMessage("No audio content available for this topic yet.")
         return
     }
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         items(audioItems) { audio ->
-            AudioItemCard(audio = audio, playerManager = playerManager)
-            // TODO: Add bookmark icons for Audio later
+             var isBookmarked by remember(audio.id, userPrefsHelper.isAudioBookmarked(audio.id)) {
+                mutableStateOf(userPrefsHelper.isAudioBookmarked(audio.id))
+            }
+            AudioItemCard(
+                audio = audio,
+                playerManager = playerManager,
+                isBookmarked = isBookmarked,
+                onBookmarkToggle = {
+                    isBookmarked = userPrefsHelper.toggleAudioBookmark(audio.id)
+                }
+            )
         }
     }
 }
@@ -189,10 +215,8 @@ fun AudioList(audioItems: List<AudioContent>, playerManager: PlayerManager) {
 fun NoteItemCard(
     note: Note,
     isBookmarked: Boolean,
-    isRead: Boolean,
     onClick: () -> Unit,
-    onBookmarkToggle: () -> Unit,
-    onReadToggle: () -> Unit
+    onBookmarkToggle: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -213,22 +237,12 @@ fun NoteItemCard(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)
                 )
-                Row {
-                    IconButton(onClick = onBookmarkToggle, modifier = Modifier.size(28.dp)) {
-                        Icon(
-                            imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                            contentDescription = "Bookmark",
-                            tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    IconButton(onClick = onReadToggle, modifier = Modifier.size(28.dp)) {
-                        Icon(
-                            imageVector = if (isRead) Icons.Filled.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
-                            contentDescription = "Mark as Read",
-                            tint = if (isRead) Color.Green.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                IconButton(onClick = onBookmarkToggle, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                        contentDescription = "Bookmark Note",
+                        tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
             Spacer(modifier = Modifier.height(6.dp))
@@ -243,34 +257,46 @@ fun NoteItemCard(
 }
 
 @Composable
-fun FaqItem(faq: Faq) {
+fun FaqItem(faq: Faq, isBookmarked: Boolean, onBookmarkToggle: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier
-            .clickable { expanded = !expanded }
-            .padding(16.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp)) { // Adjusted padding
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+                    .padding(vertical = 8.dp) // Padding for the clickable area
+            ) {
                 Text(
                     text = faq.question,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.weight(1f)
                 )
+                Spacer(Modifier.width(8.dp))
+                IconButton(onClick = onBookmarkToggle, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                        contentDescription = "Bookmark FAQ",
+                        tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Icon(
                     imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                    contentDescription = if (expanded) "Collapse" else "Expand"
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    modifier = Modifier.padding(start = 0.dp) // Reduced start padding for expand icon
                 )
             }
             AnimatedVisibility(visible = expanded) {
                 Text(
                     text = faq.answer,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 8.dp)
+                    modifier = Modifier.padding(top = 8.dp, start = 0.dp, end = 8.dp, bottom = 8.dp) // Consistent padding for answer
                 )
             }
         }
@@ -278,7 +304,7 @@ fun FaqItem(faq: Faq) {
 }
 
 @Composable
-fun McqItem(mcq: Mcq) {
+fun McqItem(mcq: Mcq, isBookmarked: Boolean, onBookmarkToggle: () -> Unit) {
     var selectedOption by remember { mutableStateOf<String?>(null) }
     var showAnswer by remember { mutableStateOf(false) }
 
@@ -288,7 +314,21 @@ fun McqItem(mcq: Mcq) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(mcq.questionText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                Text(
+                    text = mcq.questionText,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onBookmarkToggle, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                        contentDescription = "Bookmark MCQ",
+                        tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(12.dp))
 
             val options = listOf("A" to mcq.optionA, "B" to mcq.optionB, "C" to mcq.optionC, "D" to mcq.optionD)
@@ -345,7 +385,12 @@ fun OptionRow(prefix: String, text: String, isSelected: Boolean, showAsCorrect: 
 }
 
 @Composable
-fun AudioItemCard(audio: AudioContent, playerManager: PlayerManager) {
+fun AudioItemCard(
+    audio: AudioContent,
+    playerManager: PlayerManager,
+    isBookmarked: Boolean,
+    onBookmarkToggle: () -> Unit
+) {
     val currentPlayerData by playerManager.playerState.collectAsState()
     val isThisAudioActive = currentPlayerData.currentPlayingUrl == audio.audioUrl
     val isPlayingThisAudio = isThisAudioActive && currentPlayerData.isActuallyPlaying
@@ -367,19 +412,28 @@ fun AudioItemCard(audio: AudioContent, playerManager: PlayerManager) {
                         Text("${it / 60}:${String.format("%02d", it % 60)}", style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                IconButton(onClick = {
-                    if (isPlayingThisAudio) {
-                        playerManager.pause()
-                    } else {
-                        playerManager.play(audio.audioUrl)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBookmarkToggle, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                            contentDescription = "Bookmark Audio",
+                            tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                }) {
-                    Icon(
-                        imageVector = if (isPlayingThisAudio) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
-                        contentDescription = if (isPlayingThisAudio) "Pause" else "Play",
-                        modifier = Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                    IconButton(onClick = {
+                        if (isPlayingThisAudio) {
+                            playerManager.pause()
+                        } else {
+                            playerManager.play(audio.audioUrl)
+                        }
+                    }) {
+                        Icon(
+                            imageVector = if (isPlayingThisAudio) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
+                            contentDescription = if (isPlayingThisAudio) "Pause" else "Play",
+                            modifier = Modifier.size(40.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
             if (isThisAudioActive && currentPlayerData.error != null) {

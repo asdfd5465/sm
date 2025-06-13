@@ -17,14 +17,14 @@ import kotlinx.coroutines.withContext
 data class NoteDetailUiState(
     val note: Note? = null,
     val isBookmarked: Boolean = false,
-    val isRead: Boolean = false,
+    // val isRead: Boolean = false, // Removed
     val isLoading: Boolean = true,
     val error: String? = null
 )
 
 class NoteDetailViewModel(
     private val repository: ContentRepository,
-    private val userPreferencesHelper: UserPreferencesHelper, // Added
+    private val userPreferencesHelper: UserPreferencesHelper,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -48,7 +48,7 @@ class NoteDetailViewModel(
                     it.copy(
                         note = noteData,
                         isBookmarked = userPreferencesHelper.isNoteBookmarked(noteId),
-                        isRead = userPreferencesHelper.isNoteRead(noteId),
+                        // isRead = userPreferencesHelper.isNoteRead(noteId), // Removed
                         isLoading = false
                     )
                 }
@@ -63,8 +63,8 @@ class NoteDetailViewModel(
         _uiState.update { it.copy(isBookmarked = newBookmarkStatus) }
     }
 
-    fun toggleReadStatus() {
-        val newReadStatus = userPreferencesHelper.toggleNoteReadStatus(noteId)
-        _uiState.update { it.copy(isRead = newReadStatus) }
-    }
+    // fun toggleReadStatus() { // Removed
+    //     val newReadStatus = userPreferencesHelper.toggleNoteReadStatus(noteId)
+    //     _uiState.update { it.copy(isRead = newReadStatus) }
+    // }
 }

@@ -18,7 +18,7 @@ import bankwiser.bankpromotion.material.player.PlayerManager
 import bankwiser.bankpromotion.material.ui.screens.topic.AudioItemCard
 import bankwiser.bankpromotion.material.ui.screens.topic.FaqItem
 import bankwiser.bankpromotion.material.ui.screens.topic.McqItem
-import bankwiser.bankpromotion.material.ui.screens.topic.NoteItemCard // Import the updated NoteItemCard
+import bankwiser.bankpromotion.material.ui.screens.topic.NoteItemCard
 import bankwiser.bankpromotion.material.ui.viewmodel.SearchViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
 
@@ -31,7 +31,7 @@ fun SearchScreen(
     val context = LocalContext.current
     val application = context.applicationContext as BankWiserApplication
     val repository = application.contentRepository
-    val userPrefsHelper = application.userPreferencesHelper // Get UserPreferencesHelper
+    val userPrefsHelper = application.userPreferencesHelper
     val viewModel: SearchViewModel = viewModel(factory = ViewModelFactory(repository))
     val uiState by viewModel.uiState.collectAsState()
     var searchQuery by remember { mutableStateOf(uiState.query) }
@@ -41,13 +41,12 @@ fun SearchScreen(
     }
 
     val effectiveOnNavigateUp = if (uiState.initialScreen && uiState.query.isBlank()) {
-        onNavigateUp // Allow normal back navigation if search is truly empty and initial
+        onNavigateUp
     } else if (uiState.query.isNotBlank()) {
         { searchQuery = "" } // Clear search query on back press if there's a query
     } else {
-        onNavigateUp // Default back navigation
+        onNavigateUp
     }
-
 
     Scaffold(
         topBar = {
@@ -73,7 +72,12 @@ fun SearchScreen(
                     IconButton(onClick = effectiveOnNavigateUp) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors( // Added for consistency
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         }
     ) { paddingValues ->
@@ -102,23 +106,15 @@ fun SearchScreen(
                     if (uiState.notes.isNotEmpty()) {
                         item { SectionHeader("Notes") }
                         items(uiState.notes) { note ->
-                            // Pass the required parameters to NoteItemCard
                             var isBookmarked by remember(note.id, userPrefsHelper.isNoteBookmarked(note.id)) {
                                 mutableStateOf(userPrefsHelper.isNoteBookmarked(note.id))
                             }
-                            var isRead by remember(note.id, userPrefsHelper.isNoteRead(note.id)) {
-                                mutableStateOf(userPrefsHelper.isNoteRead(note.id))
-                            }
-                            NoteItemCard(
+                            NoteItemCard( // Corrected: Removed isRead and onReadToggle
                                 note = note,
                                 isBookmarked = isBookmarked,
-                                isRead = isRead,
                                 onClick = { onNoteClick(note.id) },
                                 onBookmarkToggle = {
                                     isBookmarked = userPrefsHelper.toggleNoteBookmark(note.id)
-                                },
-                                onReadToggle = {
-                                    isRead = userPrefsHelper.toggleNoteReadStatus(note.id)
                                 }
                             )
                         }
@@ -126,22 +122,47 @@ fun SearchScreen(
                     if (uiState.faqs.isNotEmpty()) {
                         item { SectionHeader("FAQs") }
                         items(uiState.faqs) { faq ->
-                            FaqItem(faq = faq)
-                            // TODO: Add bookmark/read for FAQs from search results later
+                            var isBookmarked by remember(faq.id, userPrefsHelper.isFaqBookmarked(faq.id)) {
+                                mutableStateOf(userPrefsHelper.isFaqBookmarked(faq.id))
+                            }
+                            FaqItem(
+                                faq = faq,
+                                isBookmarked = isBookmarked,
+                                onBookmarkToggle = {
+                                    isBookmarked = userPrefsHelper.toggleFaqBookmark(faq.id)
+                                }
+                            )
                         }
                     }
                     if (uiState.mcqs.isNotEmpty()) {
                         item { SectionHeader("MCQs") }
                         items(uiState.mcqs) { mcq ->
-                            McqItem(mcq = mcq)
-                            // TODO: Add bookmark for MCQs from search results later
+                            var isBookmarked by remember(mcq.id, userPrefsHelper.isMcqBookmarked(mcq.id)) {
+                                mutableStateOf(userPrefsHelper.isMcqBookmarked(mcq.id))
+                            }
+                            McqItem(
+                                mcq = mcq,
+                                isBookmarked = isBookmarked,
+                                onBookmarkToggle = {
+                                    isBookmarked = userPrefsHelper.toggleMcqBookmark(mcq.id)
+                                }
+                            )
                         }
                     }
                     if (uiState.audioContent.isNotEmpty()) {
                         item { SectionHeader("Audio Content") }
                         items(uiState.audioContent) { audio ->
-                            AudioItemCard(audio = audio, playerManager = playerManager)
-                            // TODO: Add bookmark for Audio from search results later
+                            var isBookmarked by remember(audio.id, userPrefsHelper.isAudioBookmarked(audio.id)) {
+                                mutableStateOf(userPrefsHelper.isAudioBookmarked(audio.id))
+                            }
+                            AudioItemCard(
+                                audio = audio,
+                                playerManager = playerManager,
+                                isBookmarked = isBookmarked,
+                                onBookmarkToggle = {
+                                    isBookmarked = userPrefsHelper.toggleAudioBookmark(audio.id)
+                                }
+                            )
                         }
                     }
                 }
