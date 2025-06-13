@@ -16,7 +16,7 @@ class UserPreferencesHelper(context: Context) {
         private const val IS_SUBSCRIBED_KEY = "is_user_subscribed" // New key
     }
 
-    // --- Subscription Status (Simulated) --- todo
+    // --- Subscription Status (Simulated) --- todo Phase 6
     fun isUserSubscribed(): Boolean {
         // In a debug build, you could override this with BuildConfig.FORCE_SUBSCRIBED_DEBUG
         return prefs.getBoolean(IS_SUBSCRIBED_KEY, false) // Default to not subscribed
