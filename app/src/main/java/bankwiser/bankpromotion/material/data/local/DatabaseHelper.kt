@@ -90,10 +90,16 @@ class DatabaseHelper(private val context: Context) {
         subCategories
     }
 
-    // --- Notes ---
+    private fun Cursor.getBoolean(columnName: String): Boolean {
+        val index = getColumnIndex(columnName)
+        return if (index != -1 && !isNull(index)) getInt(index) == 1 else false
+    }
+
+// --- Notes ---
     fun getNotes(subCategoryId: String): List<Note> = readData { db ->
         val notes = mutableListOf<Note>()
-        val query = "SELECT note_id, title, body, sub_category_id FROM notes WHERE sub_category_id = ? AND is_deleted = 0"
+        // Added is_free_launch_content, is_premium
+        val query = "SELECT note_id, title, body, sub_category_id, is_free_launch_content, is_premium FROM notes WHERE sub_category_id = ? AND is_deleted = 0"
         db.rawQuery(query, arrayOf(subCategoryId)).use { cursor ->
             while (cursor.moveToNext()) {
                 notes.add(
@@ -101,23 +107,28 @@ class DatabaseHelper(private val context: Context) {
                         id = cursor.getString(cursor.getColumnIndexOrThrow("note_id")),
                         title = cursor.getString(cursor.getColumnIndexOrThrow("title")),
                         body = cursor.getString(cursor.getColumnIndexOrThrow("body")),
-                        subCategoryId = cursor.getStringOrNull("sub_category_id")
+                        subCategoryId = cursor.getStringOrNull("sub_category_id"),
+                        isFreeLaunchContent = cursor.getBoolean("is_free_launch_content"),
+                        isPremium = cursor.getBoolean("is_premium")
                     )
                 )
             }
         }
         notes
     }
-
+    
     fun getNote(noteId: String): Note? = readData { db ->
-        val query = "SELECT note_id, title, body, sub_category_id FROM notes WHERE note_id = ? AND is_deleted = 0"
+        // Added is_free_launch_content, is_premium
+        val query = "SELECT note_id, title, body, sub_category_id, is_free_launch_content, is_premium FROM notes WHERE note_id = ? AND is_deleted = 0"
         db.rawQuery(query, arrayOf(noteId)).use { cursor ->
             if (cursor.moveToFirst()) {
                 return@readData Note(
                     id = cursor.getString(cursor.getColumnIndexOrThrow("note_id")),
                     title = cursor.getString(cursor.getColumnIndexOrThrow("title")),
                     body = cursor.getString(cursor.getColumnIndexOrThrow("body")),
-                    subCategoryId = cursor.getStringOrNull("sub_category_id")
+                    subCategoryId = cursor.getStringOrNull("sub_category_id"),
+                    isFreeLaunchContent = cursor.getBoolean("is_free_launch_content"),
+                    isPremium = cursor.getBoolean("is_premium")
                 )
             }
         }
@@ -127,7 +138,8 @@ class DatabaseHelper(private val context: Context) {
     // --- FAQs ---
     fun getFaqs(subCategoryId: String): List<Faq> = readData { db ->
         val faqs = mutableListOf<Faq>()
-        val query = "SELECT faq_id, question, answer, sub_category_id FROM faqs WHERE sub_category_id = ? AND is_deleted = 0"
+        // Added is_free_launch_content, is_premium
+        val query = "SELECT faq_id, question, answer, sub_category_id, is_free_launch_content, is_premium FROM faqs WHERE sub_category_id = ? AND is_deleted = 0"
         db.rawQuery(query, arrayOf(subCategoryId)).use { cursor ->
             while (cursor.moveToNext()) {
                 faqs.add(
@@ -135,7 +147,9 @@ class DatabaseHelper(private val context: Context) {
                         id = cursor.getString(cursor.getColumnIndexOrThrow("faq_id")),
                         question = cursor.getString(cursor.getColumnIndexOrThrow("question")),
                         answer = cursor.getString(cursor.getColumnIndexOrThrow("answer")),
-                        subCategoryId = cursor.getStringOrNull("sub_category_id")
+                        subCategoryId = cursor.getStringOrNull("sub_category_id"),
+                        isFreeLaunchContent = cursor.getBoolean("is_free_launch_content"),
+                        isPremium = cursor.getBoolean("is_premium")
                     )
                 )
             }
@@ -146,7 +160,8 @@ class DatabaseHelper(private val context: Context) {
     // --- MCQs ---
     fun getMcqs(subCategoryId: String): List<Mcq> = readData { db ->
         val mcqs = mutableListOf<Mcq>()
-        val query = "SELECT mcq_id, question_text, option_a, option_b, option_c, option_d, correct_option, sub_category_id FROM mcqs WHERE sub_category_id = ? AND is_deleted = 0"
+        // Added is_free_launch_content, is_premium
+        val query = "SELECT mcq_id, question_text, option_a, option_b, option_c, option_d, correct_option, sub_category_id, is_free_launch_content, is_premium FROM mcqs WHERE sub_category_id = ? AND is_deleted = 0"
         db.rawQuery(query, arrayOf(subCategoryId)).use { cursor ->
             while (cursor.moveToNext()) {
                 mcqs.add(
@@ -158,18 +173,21 @@ class DatabaseHelper(private val context: Context) {
                         optionC = cursor.getString(cursor.getColumnIndexOrThrow("option_c")),
                         optionD = cursor.getString(cursor.getColumnIndexOrThrow("option_d")),
                         correctOption = cursor.getString(cursor.getColumnIndexOrThrow("correct_option")),
-                        subCategoryId = cursor.getStringOrNull("sub_category_id")
+                        subCategoryId = cursor.getStringOrNull("sub_category_id"),
+                        isFreeLaunchContent = cursor.getBoolean("is_free_launch_content"),
+                        isPremium = cursor.getBoolean("is_premium")
                     )
                 )
             }
         }
         mcqs
     }
-
+    
     // --- AudioContent ---
     fun getAudioContent(subCategoryId: String): List<AudioContent> = readData { db ->
         val audioList = mutableListOf<AudioContent>()
-        val query = "SELECT audio_id, title, audio_url, duration_seconds, sub_category_id FROM audiocontent WHERE sub_category_id = ? AND is_deleted = 0"
+        // Added is_free_launch_content, is_premium
+        val query = "SELECT audio_id, title, audio_url, duration_seconds, sub_category_id, is_free_launch_content, is_premium FROM audiocontent WHERE sub_category_id = ? AND is_deleted = 0"
         db.rawQuery(query, arrayOf(subCategoryId)).use { cursor ->
             while (cursor.moveToNext()) {
                 audioList.add(
@@ -178,7 +196,9 @@ class DatabaseHelper(private val context: Context) {
                         title = cursor.getString(cursor.getColumnIndexOrThrow("title")),
                         audioUrl = cursor.getString(cursor.getColumnIndexOrThrow("audio_url")),
                         durationSeconds = cursor.getIntOrNull("duration_seconds"),
-                        subCategoryId = cursor.getStringOrNull("sub_category_id")
+                        subCategoryId = cursor.getStringOrNull("sub_category_id"),
+                        isFreeLaunchContent = cursor.getBoolean("is_free_launch_content"),
+                        isPremium = cursor.getBoolean("is_premium")
                     )
                 )
             }
