@@ -75,6 +75,13 @@ fun TopicContentScreen(
                     navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
+              Button(onClick = { 
+    val currentSimulatedStatus = (context.applicationContext as BankWiserApplication)
+                                    .userPreferencesHelper.isUserSubscribed()
+    subscriptionViewModel.setSimulatedSubscription(!currentSimulatedStatus) 
+}) {
+    Text(if (hasPremiumAccess) "Simulate Unsubscribe" else "Simulate Subscribe")
+}      
         }
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
