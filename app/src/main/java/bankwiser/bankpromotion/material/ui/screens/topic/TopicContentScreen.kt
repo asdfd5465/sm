@@ -265,6 +265,8 @@ fun AudioList(audioItems: List<AudioContent>, playerManager: PlayerManager, hasP
     }
 }
 
+// ... (package, imports, isContentAccessible function, TopicContentScreen, Lists, etc. remain the same) ...
+// --- Individual Item Composables with Lock Indicator ---
 
 @Composable
 fun NoteItemCard(
@@ -272,19 +274,32 @@ fun NoteItemCard(
     isBookmarked: Boolean,
     onClick: () -> Unit,
     onBookmarkToggle: () -> Unit,
-    isLocked: Boolean
+    isLocked: Boolean // This flag determines if the lock OVERLAY is shown and click is disabled
 ) {
-    Box { // Wrap Card in a Box to apply overlay
+    // Determine if the padlock icon itself should be shown (premium, not free launch)
+    val showPadlockIcon = note.isPremium && !note.isFreeLaunchContent
+
+    Box {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(enabled = !isLocked, onClick = onClick), // Disable click if locked
+                .clickable(enabled = !isLocked, onClick = onClick),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             shape = MaterialTheme.shapes.large
         ) {
             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(note.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(note.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        if (showPadlockIcon && !isLocked) { // Show padlock if premium (not free launch) & accessible (meaning user is subbed)
+                            Icon(
+                                imageVector = Icons.Filled.LockOpen, // Or just Lock if you prefer
+                                contentDescription = "Premium",
+                                tint = MaterialTheme.colorScheme.primary, // Or a gold color
+                                modifier = Modifier.size(16.dp).padding(start = 4.dp)
+                            )
+                        }
+                    }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         note.body,
@@ -304,7 +319,7 @@ fun NoteItemCard(
                                 tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    } else {
+                    } else { // This is for the main big lock icon when content is actually locked
                         Icon(
                             imageVector = Icons.Filled.Lock,
                             contentDescription = "Locked",
@@ -316,7 +331,7 @@ fun NoteItemCard(
             }
         }
         if (isLocked) {
-            PremiumLockedOverlay(onClickAction = onClick) // Use the main onClick for the overlay
+            PremiumLockedOverlay(onClickAction = onClick)
         }
     }
 }
@@ -330,6 +345,8 @@ fun FaqItem(
     onLockedItemClick: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val showPadlockIcon = faq.isPremium && !faq.isFreeLaunchContent
+
     Box {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -342,13 +359,22 @@ fun FaqItem(
                     .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = faq.question,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.weight(1f),
-                        color = if (isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else LocalContentColor.current
-                    )
+                    Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = faq.question,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = if (isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else LocalContentColor.current
+                        )
+                        if (showPadlockIcon && !isLocked) {
+                             Icon(
+                                imageVector = Icons.Filled.LockOpen,
+                                contentDescription = "Premium",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(14.dp).padding(start = 4.dp)
+                            )
+                        }
+                    }
                     Spacer(Modifier.width(8.dp))
                     if (!isLocked) {
                         IconButton(onClick = onBookmarkToggle, modifier = Modifier.size(28.dp)) {
@@ -401,6 +427,8 @@ fun McqItem(
 ) {
     var selectedOption by remember { mutableStateOf<String?>(null) }
     var showAnswer by remember { mutableStateOf(false) }
+    val showPadlockIcon = mcq.isPremium && !mcq.isFreeLaunchContent
+
     Box {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -408,14 +436,23 @@ fun McqItem(
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                    Text(
-                        text = mcq.questionText,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.weight(1f),
-                        color = if (isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else LocalContentColor.current
-                    )
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { // Changed to CenterVertically
+                    Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                         Text(
+                            text = mcq.questionText,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = if (isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else LocalContentColor.current
+                        )
+                        if (showPadlockIcon && !isLocked) {
+                             Icon(
+                                imageVector = Icons.Filled.LockOpen,
+                                contentDescription = "Premium",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(14.dp).padding(start = 4.dp)
+                            )
+                        }
+                    }
                     if (!isLocked) {
                         IconButton(onClick = onBookmarkToggle, modifier = Modifier.size(28.dp)) {
                             Icon(
@@ -464,7 +501,7 @@ fun McqItem(
                         )
                     }
                 } else {
-                    Text("Subscribe to practice MCQs.", style = MaterialTheme.typography.bodyMedium, color = TextSecondary, modifier = Modifier.padding(vertical = 20.dp))
+                     Text("Subscribe to practice MCQs.", style = MaterialTheme.typography.bodyMedium, color = TextSecondary, modifier = Modifier.padding(vertical = 20.dp))
                 }
             }
         }
@@ -487,6 +524,7 @@ fun AudioItemCard(
     val currentPlayerData by playerManager.playerState.collectAsState()
     val isThisAudioActive = currentPlayerData.currentPlayingUrl == audio.audioUrl
     val isPlayingThisAudio = isThisAudioActive && currentPlayerData.isActuallyPlaying
+    val showPadlockIcon = audio.isPremium && !audio.isFreeLaunchContent
 
     Box {
         Card(
@@ -501,10 +539,20 @@ fun AudioItemCard(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            audio.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium,
-                            color = if (isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else LocalContentColor.current
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                             Text(
+                                audio.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium,
+                                color = if (isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else LocalContentColor.current
+                            )
+                            if (showPadlockIcon && !isLocked) {
+                                 Icon(
+                                    imageVector = Icons.Filled.LockOpen,
+                                    contentDescription = "Premium",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(14.dp).padding(start = 4.dp)
+                                )
+                            }
+                        }
                         audio.durationSeconds?.let {
                             Text(
                                 "${it / 60}:${String.format("%02d", it % 60)}", style = MaterialTheme.typography.bodySmall,
@@ -522,11 +570,9 @@ fun AudioItemCard(
                                 )
                             }
                             IconButton(onClick = {
-                                if (isLocked) onLockedItemClick()
-                                else {
-                                    if (isPlayingThisAudio) playerManager.pause()
-                                    else playerManager.play(audio.audioUrl)
-                                }
+                                // Click is now handled by the Box overlay if locked
+                                if (isPlayingThisAudio) playerManager.pause()
+                                else playerManager.play(audio.audioUrl)
                             }) {
                                 Icon(
                                     imageVector = if (isPlayingThisAudio) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
@@ -539,7 +585,7 @@ fun AudioItemCard(
                             Icon(
                                 imageVector = Icons.Filled.Lock,
                                 contentDescription = "Locked",
-                                modifier = Modifier.size(24.dp).padding(end = 4.dp),
+                                modifier = Modifier.size(24.dp).padding(end = 4.dp), // Placeholder for play icon space
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
                         }
@@ -560,7 +606,6 @@ fun AudioItemCard(
         }
     }
 }
-
 
 @Composable
 fun OptionRow(prefix: String, text: String, isSelected: Boolean, showAsCorrect: Boolean, showAsIncorrect: Boolean, onSelected: () -> Unit) {
