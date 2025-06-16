@@ -142,5 +142,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: signed-release-apk
-          path: app/build/outputs/aab/release/app-release.aab
+          path: app/build/outputs/bundle/release/app-release.aab
+          
           if-no-files-found: error
