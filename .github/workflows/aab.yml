@@ -1,4 +1,4 @@
-name: Phase5 Sign
+name: Phase7 Sign AAB
 
 on:
   workflow_dispatch: # Allows manual triggering
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build_and_sign_release:
-    name: Build Signed Release 5 APK
+    name: Build Signed Release 7 AAB
     runs-on: ubuntu-latest
     # Optional: Condition to run only on manual dispatch or tags
     # if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
@@ -128,19 +128,19 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Build Signed Release APK
+      - name: Build Signed Release AAB
         run: |
           echo "Starting Release Build..."
-          ./gradlew clean assembleRelease
+          ./gradlew bundleRelease
         env:
           # ANDROID_SDK_ROOT and ANDROID_HOME are already in GITHUB_ENV
           # The SIGNING_... variables are also set in GITHUB_ENV from the previous step
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
-      - name: Upload Release APK artifact
+      - name: Upload Release AAB artifact
         uses: actions/upload-artifact@v4
         with:
-          name: signed-release-apk
-          path: app/build/outputs/apk/release/app-release.apk
+          name: signed-release-aab
+          path: app/build/outputs/apk/release/app-release.aab
           if-no-files-found: error
