@@ -142,5 +142,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: signed-release-aab
-          path: path: app/build/outputs/bundle/release/app-release.aab
+          path: app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
