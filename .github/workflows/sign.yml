@@ -131,7 +131,7 @@ jobs:
       - name: Build Signed Release APK
         run: |
           echo "Starting Release Build..."
-          ./gradlew assembleRelease
+          ./gradlew clean assembleRelease
         env:
           # ANDROID_SDK_ROOT and ANDROID_HOME are already in GITHUB_ENV
           # The SIGNING_... variables are also set in GITHUB_ENV from the previous step
