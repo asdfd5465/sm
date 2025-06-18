@@ -55,16 +55,31 @@ class AssetPackUpdateManager(
     private var currentRemotePackName = ""
     private var currentRemoteDbFilename = ""
 
-    // Define the listener as a property
     private val assetPackStateUpdateListener: AssetPackStateUpdateListener =
         AssetPackStateUpdateListener { state ->
-            handleAssetPackStateUpdate(state) // Delegate to a separate function
+            handleAssetPackStateUpdate(state)
         }
     
     private var isListenerRegistered = false
 
+    // Helper to get string representation of status for logging
+    private fun statusToString(@AssetPackStatus status: Int): String {
+        return when (status) {
+            AssetPackStatus.UNKNOWN -> "UNKNOWN"
+            AssetPackStatus.PENDING -> "PENDING"
+            AssetPackStatus.DOWNLOADING -> "DOWNLOADING"
+            AssetPackStatus.TRANSFERRING -> "TRANSFERRING"
+            AssetPackStatus.COMPLETED -> "COMPLETED"
+            AssetPackStatus.FAILED -> "FAILED"
+            AssetPackStatus.CANCELED -> "CANCELED"
+            AssetPackStatus.WAITING_FOR_WIFI -> "WAITING_FOR_WIFI"
+            AssetPackStatus.NOT_INSTALLED -> "NOT_INSTALLED"
+            else -> status.toString()
+        }
+    }
+
     private fun handleAssetPackStateUpdate(state: AssetPackState) {
-        Log.d(TAG, "AssetPack State Update: ${state.name()} is ${AssetPackStatus. μεγάλο(state.status())}, progress: ${state.transferProgressPercentage()}%")
+        Log.d(TAG, "AssetPack State Update: ${state.name()} is ${statusToString(state.status())}, progress: ${state.transferProgressPercentage()}%")
         when (state.status()) {
             AssetPackStatus.PENDING -> _updateState.value = UpdateState.Downloading(state.name(), 0)
             AssetPackStatus.DOWNLOADING -> {
@@ -80,7 +95,7 @@ class AssetPackUpdateManager(
                 } else {
                     Log.e(TAG, "Mismatch or invalid state for installing pack: ${state.name()}. RC Pack: $currentRemotePackName, File: $currentRemoteDbFilename, Ver: $currentRemoteConfigVersion")
                     _updateState.value = UpdateState.UpdateFailedInstallation
-                    unregisterListener() // Unregister on failure too
+                    unregisterListener()
                 }
             }
             AssetPackStatus.FAILED -> {
@@ -99,7 +114,6 @@ class AssetPackUpdateManager(
             }
             AssetPackStatus.NOT_INSTALLED -> {
                 Log.i(TAG, "Asset pack ${state.name()} status: NOT_INSTALLED.")
-                // This might happen if fetch wasn't called. If we are in a downloading state, try to fetch again.
                 val currentUpdateState = _updateState.value
                 if (currentUpdateState is UpdateState.Downloading && currentUpdateState.packName == state.name()) {
                     Log.d(TAG, "Re-triggering fetch for ${state.name()}")
@@ -120,7 +134,7 @@ class AssetPackUpdateManager(
         _updateState.value = UpdateState.CheckingForUpdate
         val remoteConfig = Firebase.remoteConfig
         val configSettings = remoteConfigSettings {
-            minimumFetchIntervalInSeconds = 300
+            minimumFetchIntervalInSeconds = 300 
         }
         remoteConfig.setConfigSettingsAsync(configSettings)
         val defaults = mapOf(
@@ -180,7 +194,6 @@ class AssetPackUpdateManager(
             isListenerRegistered = true
         }
 
-
         assetPackManager.getPackStates(listOf(packName))
             .addOnSuccessListener { assetPackStatesResult ->
                 val packState = assetPackStatesResult.packStates()[packName]
@@ -191,37 +204,36 @@ class AssetPackUpdateManager(
                     return@addOnSuccessListener
                 }
 
-                Log.d(TAG, "Initial state for $packName: ${AssetPackStatus. μεγάλο(packState.status())}")
+                Log.d(TAG, "Initial state for $packName: ${statusToString(packState.status())}")
                 when (packState.status()) {
                     AssetPackStatus.NOT_INSTALLED, AssetPackStatus.FAILED, AssetPackStatus.CANCELED -> {
                         Log.d(TAG, "Fetching pack $packName as it's NOT_INSTALLED, FAILED, or CANCELED.")
                         assetPackManager.fetch(listOf(packName))
                             .addOnFailureListener { e ->
                                 Log.e(TAG, "Failed to initiate fetch for asset pack $packName", e)
-                                _updateState.value = UpdateState.DownloadFailed(packName, AssetPackStatus.FAILED)
+                                _updateState.value = UpdateState.DownloadFailed(packName, AssetPackStatus.FAILED) // Corrected
                                 unregisterListener()
                             }
                     }
-                    AssetPackStatus.DOWNLOADED -> {
-                        Log.i(TAG, "Asset pack $packName ALREADY_DOWNLOADED. Proceeding to install.")
+                    AssetPackStatus.COMPLETED -> { // Corrected from DOWNLOADED
+                        Log.i(TAG, "Asset pack $packName ALREADY_DOWNLOADED (status COMPLETED). Proceeding to install.")
                         _updateState.value = UpdateState.VerifyingUpdate
                         installDownloadedPack(packName, currentRemoteDbFilename, currentRemoteConfigVersion)
                     }
                     AssetPackStatus.PENDING, AssetPackStatus.DOWNLOADING, AssetPackStatus.TRANSFERRING, AssetPackStatus.WAITING_FOR_WIFI -> {
-                        Log.d(TAG, "Asset pack $packName is already in progress (Status: ${AssetPackStatus. μεγάλο(packState.status())}). Listener will handle.")
+                        Log.d(TAG, "Asset pack $packName is already in progress (Status: ${statusToString(packState.status())}). Listener will handle.")
                     }
                     else -> {
-                        Log.d(TAG, "Asset pack $packName in unhandled initial state: ${AssetPackStatus. μεγάλο(packState.status())}")
+                        Log.d(TAG, "Asset pack $packName in unhandled initial state: ${statusToString(packState.status())}")
                     }
                 }
             }
             .addOnFailureListener { e ->
                 Log.e(TAG, "Failed to get pack states for $packName", e)
-                _updateState.value = UpdateState.DownloadFailed(packName, AssetPackStatus.FAILED)
+                _updateState.value = UpdateState.DownloadFailed(packName, AssetPackStatus.FAILED) // Corrected
                 unregisterListener()
             }
     }
-
 
     private fun installDownloadedPack(packName: String, dbFileNameInPack: String, newVersion: Int) {
         coroutineScope.launch {
