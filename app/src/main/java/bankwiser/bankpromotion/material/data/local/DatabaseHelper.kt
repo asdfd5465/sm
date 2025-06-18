@@ -3,38 +3,40 @@ package bankwiser.bankpromotion.material.data.local
 import android.content.Context
 import android.database.Cursor
 import android.util.Log
-import bankwiser.bankpromotion.material.data.model.*
+import bankwiser.bankpromotion.material.data.model.* // Assuming this line correctly imports your Category, SubCategory, Note etc. models
 import net.sqlcipher.database.SQLiteDatabase
-import net.sqlcipher.database.SQLiteException // <<< ENSURE THIS IS THE SQLCIPHER VERSION
+import net.sqlcipher.database.SQLiteException // <<< THIS IS THE CRUCIAL AND CORRECT IMPORT FOR SQLCIPHER
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 
-const val DATABASE_ENCRYPTION_KEY = "bankwiser" // REPLACE THIS!
+// Ensure DATABASE_ENCRYPTION_KEY is defined, e.g.:
+// const val DATABASE_ENCRYPTION_KEY = "your_actual_secret_key"
 
 class DatabaseHelper(private val context: Context) {
 
     private val internalDbName = "content.db"
+    // Ensure initialBundledAssetDbName matches the actual encrypted file in your app/assets/database folder
     private val initialBundledAssetDbName = "content_v1.db"
     private val initialBundledAssetPath = "database/$initialBundledAssetDbName"
 
     companion object {
         private const val TAG = "DatabaseHelper"
-        var isDatabaseLoaded = false
+        var isDatabaseLoaded = false // Static flag to ensure libs are loaded once per process
     }
 
     init {
         synchronized(DatabaseHelper::class.java) {
             if (!isDatabaseLoaded) {
                 try {
-                    SQLiteDatabase.loadLibs(context)
+                    SQLiteDatabase.loadLibs(context.applicationContext) // Use applicationContext
                     isDatabaseLoaded = true
                     Log.d(TAG, "SQLCipher libraries loaded successfully.")
                 } catch (e: UnsatisfiedLinkError) {
-                    Log.e(TAG, "Failed to load SQLCipher libraries. Add 'android.bundle.enableUncompressedNativeLibs=false' to gradle.properties if using an older AGP or ensure native libs are packaged correctly.", e)
-                    // This is a critical error, app might not function with DB.
+                    Log.e(TAG, "CRITICAL: Failed to load SQLCipher native libraries. Check library inclusion and gradle.properties (android.bundle.enableUncompressedNativeLibs=false for older AGP). App may not function with DB.", e)
+                    // Depending on your app's needs, you might re-throw or handle this critically
                 } catch (e: Exception) {
-                     Log.e(TAG, "Some other error loading SQLCipher libs.", e)
+                    Log.e(TAG, "CRITICAL: An unexpected error occurred while loading SQLCipher libraries.", e)
                 }
             }
         }
@@ -46,6 +48,16 @@ class DatabaseHelper(private val context: Context) {
 
     private fun openDatabase(): SQLiteDatabase {
         val dbFile = getDatabaseFile()
+        if (!isDatabaseLoaded) { // Double check, especially if init could be bypassed or fail silently
+            Log.w(TAG, "SQLCipher libraries not loaded, attempting to load again before opening DB.")
+            synchronized(DatabaseHelper::class.java) {
+                if (!isDatabaseLoaded) {
+                    SQLiteDatabase.loadLibs(context.applicationContext)
+                    isDatabaseLoaded = true
+                }
+            }
+        }
+
         if (!dbFile.exists()) {
             try {
                 Log.d(TAG, "Internal database does not exist. Copying initial bundled encrypted DB.")
@@ -56,16 +68,16 @@ class DatabaseHelper(private val context: Context) {
             }
         }
         Log.d(TAG, "Opening internal encrypted database: ${dbFile.path}")
-        // Ensure libraries are loaded before trying to open.
-        if (!isDatabaseLoaded) { // Double check in case init wasn't called or failed silently
-             synchronized(DatabaseHelper::class.java) {
-                if (!isDatabaseLoaded) {
-                    SQLiteDatabase.loadLibs(context)
-                    isDatabaseLoaded = true
-                }
-            }
+        try {
+            return SQLiteDatabase.openOrCreateDatabase(dbFile, DATABASE_ENCRYPTION_KEY, null)
+        } catch (e: net.sqlcipher.database.SQLiteException) { // Catch SQLCipher specific exception
+            Log.e(TAG, "SQLCipher Error opening/creating database: ${e.message}. Check encryption key or DB file corruption.", e)
+            // If DB is corrupted, might need to delete and recopy or handle error
+            // For example, try deleting the corrupted db and recopying
+            if (dbFile.exists()) dbFile.delete()
+            copyInitialBundledDatabase(dbFile) // Attempt to recopy
+            return SQLiteDatabase.openOrCreateDatabase(dbFile, DATABASE_ENCRYPTION_KEY, null) // Retry open
         }
-        return SQLiteDatabase.openOrCreateDatabase(dbFile, DATABASE_ENCRYPTION_KEY, null)
     }
 
     private fun copyInitialBundledDatabase(dbFile: File) {
@@ -79,27 +91,22 @@ class DatabaseHelper(private val context: Context) {
     }
 
     fun replaceDatabase(newEncryptedDbFile: File): Boolean {
-        val internalDb = getDatabaseFile()
-        var oldDbConnection: SQLiteDatabase? = null
+        val internalDbFile = getDatabaseFile()
+        var currentDb: SQLiteDatabase? = null
         try {
-            if (internalDb.exists()) {
-                try {
-                    oldDbConnection = SQLiteDatabase.openDatabase(internalDb.path, DATABASE_ENCRYPTION_KEY, null, SQLiteDatabase.OPEN_READWRITE)
-                    oldDbConnection?.close()
-                } catch (e: net.sqlcipher.database.SQLiteException) { // Use fully qualified name if ambiguous
-                    Log.w(TAG, "SQLCipher: Could not open/close old DB before replacement: ${e.message}")
-                } catch (e: Exception) {
-                     Log.w(TAG, "General: Could not open/close old DB before replacement: ${e.message}")
-                }
+            // Try to close any existing connection IF DatabaseHelper managed a single instance
+            // Since openDatabase() is called on each readData, we just need to ensure file operations are safe.
+            // The main concern is if another part of the app holds the DB open.
 
-                if (!internalDb.delete()) {
-                    Log.e(TAG, "Failed to delete old internal database.")
+            if (internalDbFile.exists()) {
+                if (!internalDbFile.delete()) {
+                    Log.e(TAG, "Failed to delete old internal database: ${internalDbFile.path}")
                     return false
                 }
                 Log.d(TAG, "Old internal database deleted.")
             }
-            newEncryptedDbFile.copyTo(internalDb, overwrite = true)
-            Log.i(TAG, "New encrypted database from PAD copied to ${internalDb.absolutePath}")
+            newEncryptedDbFile.copyTo(internalDbFile, overwrite = true)
+            Log.i(TAG, "New encrypted database from PAD copied to ${internalDbFile.absolutePath}")
             return true
         } catch (e: Exception) {
             Log.e(TAG, "Error replacing database with PAD version", e)
@@ -108,46 +115,48 @@ class DatabaseHelper(private val context: Context) {
     }
 
     private inline fun <T> readData(queryBlock: (SQLiteDatabase) -> T): T {
-        val db = openDatabase()
+        var db: SQLiteDatabase? = null
         try {
+            db = openDatabase()
             return queryBlock(db)
-        } catch (e: SQLiteException) { // SQLCipher's SQLiteException
+        } catch (e: net.sqlcipher.database.SQLiteException) { // Catch specific SQLCipher exception
             Log.e(TAG, "SQLCipher Query Exception: ${e.message}", e)
-            throw e
-        } catch (e: Exception) {
+            throw e // Re-throw to be handled by calling code or crash app to indicate critical DB issue
+        } catch (e: Exception) { // Catch other potential exceptions
             Log.e(TAG, "General DB Read Exception: ${e.message}", e)
             throw e
-        }
-        finally {
+        } finally {
             try {
-                db.close()
+                db?.close()
+            } catch (e: net.sqlcipher.database.SQLiteException) { // Catch specific SQLCipher exception on close
+                Log.e(TAG, "SQLCipher Error closing DB in finally block: ${e.message}", e)
             } catch (e: Exception) {
-                Log.e(TAG, "Error closing DB in finally block", e)
+                 Log.e(TAG, "General Error closing DB in finally block: ${e.message}", e)
             }
         }
     }
 
+    // Helper function to get column index safely
+    private fun Cursor.getColumnIndexSafe(columnName: String): Int {
+        return try { getColumnIndexOrThrow(columnName) } catch (e: IllegalArgumentException) { -1 }
+    }
+
+
     private fun Cursor.getStringOrNull(columnName: String): String? {
-        val index = getColumnIndex(columnName) // More robust than getColumnIndexOrThrow for optional columns
+        val index = getColumnIndexSafe(columnName)
         return if (index != -1 && !isNull(index)) getString(index) else null
     }
 
     private fun Cursor.getIntOrNull(columnName: String): Int? {
-        val index = getColumnIndex(columnName)
+        val index = getColumnIndexSafe(columnName)
         return if (index != -1 && !isNull(index)) getInt(index) else null
     }
-    
+
     private fun Cursor.getBoolean(columnName: String): Boolean {
-        val index = getColumnIndex(columnName)
-        // Assuming 1 is true, 0 is false, and NULL or other values are false.
+        val index = getColumnIndexSafe(columnName)
         return if (index != -1 && !isNull(index)) getInt(index) == 1 else false
     }
 
-    // --- Data Access Methods ---
-    // These should remain the same as the version that correctly fetched all necessary columns.
-    // Make sure they select from table names like "categories", "subcategories", "notes"
-    // and not "Categories", "SubCategories" if your actual table names are lowercase.
-    // Based on your schema dump, they are lowercase.
 
     fun getAllCategories(): List<Category> = readData { db ->
         val categories = mutableListOf<Category>()
