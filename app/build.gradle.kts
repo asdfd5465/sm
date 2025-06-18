@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "bankwiser.bankpromotion.material"
     compileSdk = 34
-
+    assetPacks = mutableSetOf(":contentpack") // phase 78
     // Retrieve signing information from environment variables
     // These will be set by the GitHub Actions workflow
     val storeFileFromEnv = System.getenv("SIGNING_KEYSTORE_FILE_PATH") // Custom name for the file path
@@ -94,6 +94,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    
     // Corrected Material Icons Extended dependency
     implementation("androidx.compose.material:material-icons-extended:1.6.7") 
     implementation("androidx.navigation:navigation-compose:2.7.7")
@@ -105,6 +106,16 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.0.0"))
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.android.gms:play-services-auth:21.1.0")
+    implementation("com.google.firebase:firebase-config-ktx") // For Remote Config
+    implementation("com.google.firebase:firebase-analytics-ktx") // Recommended with Remote Config
+
+    // Play Asset Delivery
+    implementation("com.google.android.play:asset-delivery-ktx:2.2.2") // Or latest
+
+    // SQLCipher for Android (for decrypting the database)
+    implementation("net.zetetic:android-database-sqlcipher:4.5.4@aar") // Or latest
+    // Required for SQLCipher with modern Android
+    implementation("androidx.sqlite:sqlite-ktx:2.4.0") // Or latest
 
     // Coil for image loading
     implementation("io.coil-kt:coil-compose:2.6.0")
