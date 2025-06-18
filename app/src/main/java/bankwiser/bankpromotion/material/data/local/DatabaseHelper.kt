@@ -2,47 +2,120 @@ package bankwiser.bankpromotion.material.data.local
 
 import android.content.Context
 import android.database.Cursor
-import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteException
+import android.util.Log
 import bankwiser.bankpromotion.material.data.model.*
+import net.sqlcipher.database.SQLiteDatabase // SQLCipher import
+import net.sqlcipher.database.SQLiteException // SQLCipher import
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 
+// IMPORTANT: This key is embedded for now.
+// For production, use a more secure key management strategy (NDK, server, etc.)
+const val DATABASE_ENCRYPTION_KEY = "your-super-secret-passphrase-for-db" // REPLACE THIS!
+
 class DatabaseHelper(private val context: Context) {
 
-    private val dbName = "content.db"
-    private val assetPath = "database/content_v1.db"
+    private val internalDbName = "content.db" // This will be the SQLCipher encrypted DB
+    private val initialBundledAssetDbName = "content_v1_bundled_encrypted.db" // Your initial encrypted DB in app/assets
+    private val initialBundledAssetPath = "database/$initialBundledAssetDbName"
 
+    companion object {
+        private const val TAG = "DatabaseHelper"
+        var isDatabaseLoaded = false // Flag to ensure SQLCipher libraries are loaded once
+    }
+
+    init {
+        synchronized(DatabaseHelper::class.java) {
+            if (!isDatabaseLoaded) {
+                SQLiteDatabase.loadLibs(context)
+                isDatabaseLoaded = true
+                Log.d(TAG, "SQLCipher libraries loaded.")
+            }
+        }
+    }
+
+    private fun getDatabaseFile(): File {
+        return context.getDatabasePath(internalDbName)
+    }
+
+    // Opens (and creates if not exists) the internal encrypted database
     private fun openDatabase(): SQLiteDatabase {
-        val dbFile = context.getDatabasePath(dbName)
+        val dbFile = getDatabaseFile()
         if (!dbFile.exists()) {
             try {
-                copyDatabase(dbFile)
+                Log.d(TAG, "Internal database does not exist. Copying initial bundled encrypted DB.")
+                copyInitialBundledDatabase(dbFile)
             } catch (e: IOException) {
+                Log.e(TAG, "Error copying initial bundled database", e)
                 throw RuntimeException("Error creating source database", e)
             }
         }
-        return SQLiteDatabase.openDatabase(dbFile.path, null, SQLiteDatabase.OPEN_READONLY)
+        Log.d(TAG, "Opening internal encrypted database: ${dbFile.path}")
+        return SQLiteDatabase.openOrCreateDatabase(dbFile, DATABASE_ENCRYPTION_KEY, null)
     }
 
-    private fun copyDatabase(dbFile: File) {
-        context.assets.open(assetPath).use { inputStream ->
+    private fun copyInitialBundledDatabase(dbFile: File) {
+        // This copies the *initial* encrypted DB bundled with the APK's assets
+        // This is for the very first install scenario.
+        // Subsequent updates will come from PAD.
+        context.assets.open(initialBundledAssetPath).use { inputStream ->
             dbFile.parentFile?.mkdirs()
             FileOutputStream(dbFile).use { outputStream ->
                 inputStream.copyTo(outputStream)
+                Log.i(TAG, "Initial bundled encrypted database copied to ${dbFile.absolutePath}")
             }
         }
     }
 
-    private inline fun <T> readData(query: (SQLiteDatabase) -> T): T {
-        val db = openDatabase()
+    // This function will be called by AssetPackUpdateManager
+    // to replace the internal DB with a new one from PAD
+    fun replaceDatabase(newEncryptedDbFile: File): Boolean {
+        val internalDb = getDatabaseFile()
+        var oldDbConnection: SQLiteDatabase? = null
         try {
-            return query(db)
+            // Ensure any existing connection is closed before replacing
+            // This is tricky; ideally, the app ensures no active reads/writes.
+            // For simplicity now, we just try to delete and copy.
+            // A more robust solution might involve signaling all DB users to release connections.
+            if (internalDb.exists()) {
+                // Try to open and close it to ensure it's not locked, though this isn't foolproof
+                try {
+                    oldDbConnection = SQLiteDatabase.openDatabase(internalDb.path, DATABASE_ENCRYPTION_KEY, null, SQLiteDatabase.OPEN_READWRITE)
+                    oldDbConnection?.close()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not open/close old DB before replacement: ${e.message}")
+                }
+                if (!internalDb.delete()) {
+                    Log.e(TAG, "Failed to delete old internal database.")
+                    return false
+                }
+                Log.d(TAG, "Old internal database deleted.")
+            }
+
+            newEncryptedDbFile.copyTo(internalDb, overwrite = true)
+            Log.i(TAG, "New encrypted database from PAD copied to ${internalDb.absolutePath}")
+            return true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error replacing database with PAD version", e)
+            // If replacement fails, try to restore the old one if possible, or handle error
+            return false
+        }
+    }
+
+
+    private inline fun <T> readData(queryBlock: (SQLiteDatabase) -> T): T {
+        val db = openDatabase() // Opens with SQLCipher
+        try {
+            return queryBlock(db)
         } catch (e: SQLiteException) {
-            e.printStackTrace()
+            Log.e(TAG, "SQLCipher Query Exception", e)
+            throw e // Re-throw to be caught by ViewModel or calling code
+        } catch (e: Exception) {
+            Log.e(TAG, "General DB Read Exception", e)
             throw e
-        } finally {
+        }
+        finally {
             db.close()
         }
     }
@@ -56,13 +129,13 @@ class DatabaseHelper(private val context: Context) {
         val index = getColumnIndex(columnName)
         return if (index != -1 && !isNull(index)) getInt(index) else null
     }
-    
+
     private fun Cursor.getBoolean(columnName: String): Boolean {
         val index = getColumnIndex(columnName)
         return if (index != -1 && !isNull(index)) getInt(index) == 1 else false
     }
 
-
+    // --- Data Access Methods (Queries remain the same, but now operate on encrypted DB) ---
     fun getAllCategories(): List<Category> = readData { db ->
         val categories = mutableListOf<Category>()
         db.rawQuery("SELECT category_id, category_name FROM categories", null).use { cursor ->
@@ -196,6 +269,7 @@ class DatabaseHelper(private val context: Context) {
         audioList
     }
 
+    // --- Search Functions ---
     fun searchNotesByTitle(query: String): List<Note> = readData { db ->
         val notes = mutableListOf<Note>()
         val sql = "SELECT note_id, title, body, sub_category_id, is_free_launch_content, is_premium FROM notes WHERE title LIKE ? AND is_deleted = 0"
