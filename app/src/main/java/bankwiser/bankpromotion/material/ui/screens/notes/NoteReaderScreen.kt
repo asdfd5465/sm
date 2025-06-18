@@ -7,15 +7,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
-// import androidx.compose.material.icons.filled.CheckCircle // No longer needed
-// import androidx.compose.material.icons.outlined.RadioButtonUnchecked // No longer needed
-import androidx.compose.material3.*
+import androidx.compose.material3.* // Keep this for other Material3 components
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-// import androidx.compose.ui.graphics.Color // No longer needed for green checkmark
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,6 +21,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.ui.viewmodel.NoteDetailViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.SavedStateViewModelFactory
+// Removed unused Color import as green checkmark is gone
+// Removed unused CheckCircle and RadioButtonUnchecked icons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,17 +52,16 @@ fun NoteReaderScreen(
                             Icon(
                                 imageVector = if (uiState.isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
                                 contentDescription = "Bookmark",
-                                tint = if (uiState.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant // Adjusted tint
+                                tint = if (uiState.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        // "Mark as Read" IconButton removed
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
                     navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant // Consistent action icon color
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
         }
@@ -89,7 +87,8 @@ fun NoteReaderScreen(
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
-                    Divider(modifier = Modifier.padding(vertical = 16.dp))
+                    // Corrected: Use HorizontalDivider
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                     Text(
                         text = note.body,
                         style = MaterialTheme.typography.bodyLarge,
