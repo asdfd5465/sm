@@ -15,6 +15,10 @@
 -keepattributes RuntimeVisibleAnnotations, RuntimeInvisibleAnnotations, RuntimeVisibleParameterAnnotations, RuntimeInvisibleParameterAnnotations, AnnotationDefault
 -keep class kotlin.Metadata { *; }
 
+# SQLCipher
+-keep class net.sqlcipher.** { *; }
+-dontwarn net.sqlcipher.**
+
 # Keep all classes and interfaces in kotlin.reflect package and their members, and subpackages
 -keep class kotlin.reflect.** { *; }
 -keep interface kotlin.reflect.** { *; }
