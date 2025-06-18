@@ -12,7 +12,7 @@ import java.io.IOException
 
 // IMPORTANT: This key is embedded for now.
 // For production, use a more secure key management strategy (NDK, server, etc.)
-const val DATABASE_ENCRYPTION_KEY = "your-super-secret-passphrase-for-db" // REPLACE THIS!
+const val DATABASE_ENCRYPTION_KEY = "bankwiser" // REPLACE THIS!
 
 class DatabaseHelper(private val context: Context) {
 
