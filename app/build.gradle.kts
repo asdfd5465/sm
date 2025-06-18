@@ -122,7 +122,7 @@ dependencies {
     implementation("com.google.android.play:asset-delivery-ktx:2.2.2") // Or latest
 
     // SQLCipher
-    implementation 'net.zetetic:android-database-sqlcipher:4.5.0'
+    implementation("net.zetetic:android-database-sqlcipher:4.5.0")
     // AndroidX SQLite support library (often needed with SQLCipher for modern Android features)
     implementation("androidx.sqlite:sqlite:2.4.0") // Use the base sqlite, not just -ktx
     implementation("androidx.sqlite:sqlite-framework:2.4.0") // Framework bindings
