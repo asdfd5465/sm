@@ -78,6 +78,18 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.13"
     }
+
+    // Packaging options for native libraries, good for SQLCipher
+    packagingOptions {
+        pickFirsts.addAll(listOf(
+            "lib/x86/libsqlcipher.so",
+            "lib/x86_64/libsqlcipher.so",
+            "lib/armeabi-v7a/libsqlcipher.so",
+            "lib/arm64-v8a/libsqlcipher.so"
+        ))
+        // Exclude duplicate meta-inf files if they cause issues, though usually not needed for SQLCipher alone
+        // exclude("META-INF/LICENSE.txt")
+        // exclude("META-INF/NOTICE.txt")
 }
 
 dependencies {
@@ -113,10 +125,11 @@ dependencies {
     // Play Asset Delivery
     implementation("com.google.android.play:asset-delivery-ktx:2.2.2") // Or latest
 
-    // SQLCipher for Android (for decrypting the database)
-    implementation("net.zetetic:android-database-sqlcipher:4.5.4@aar") // Or latest
-    // Required for SQLCipher with modern Android
-    implementation("androidx.sqlite:sqlite-ktx:2.4.0") // Or latest
+    // SQLCipher
+    implementation("net.zetetic:android-database-sqlcipher:4.5.4@aar")
+    // AndroidX SQLite support library (often needed with SQLCipher for modern Android features)
+    implementation("androidx.sqlite:sqlite:2.4.0") // Use the base sqlite, not just -ktx
+    implementation("androidx.sqlite:sqlite-framework:2.4.0") // Framework bindings
 
     // Coil for image loading
     implementation("io.coil-kt:coil-compose:2.6.0")
