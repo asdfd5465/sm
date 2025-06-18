@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.HelpOutline // Corrected import
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.*
@@ -25,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
-// import bankwiser.bankpromotion.material.billing.PREMIUM_SUBSCRIPTION_ID // Not needed directly here
 import bankwiser.bankpromotion.material.data.model.*
 import bankwiser.bankpromotion.material.player.PlayerManager
 import bankwiser.bankpromotion.material.ui.theme.TextSecondary
@@ -35,16 +35,13 @@ import bankwiser.bankpromotion.material.ui.viewmodel.TopicContentViewModel
 
 enum class ContentTab { NOTES, FAQS, MCQS, AUDIO }
 
-// Moved helper function to be accessible by SearchScreen as well
-// CORRECTED Helper function to check content accessibility
 fun isContentAccessible(isFreeLaunch: Boolean, isPremiumContent: Boolean, hasUserSubscribed: Boolean): Boolean {
-    if (isFreeLaunch) { // Rule 1: Free launch content is always accessible
+    if (isFreeLaunch) {
         return true
     }
-    // If not free launch content, then check premium status
-    return if (isPremiumContent) { // Rule 2a: If premium, user needs subscription
+    return if (isPremiumContent) {
         hasUserSubscribed
-    } else { // Rule 2b: If not premium (and not free launch), it's regular free content
+    } else {
         true
     }
 }
@@ -60,14 +57,13 @@ fun TopicContentScreen(
     val application = context.applicationContext as BankWiserApplication
     val repository = application.contentRepository
     val topicViewModel: TopicContentViewModel = viewModel(factory = SavedStateViewModelFactory(repository, application))
-    val subscriptionViewModel: SubscriptionViewModel = viewModel() 
-    
+    val subscriptionViewModel: SubscriptionViewModel = viewModel()
+
     val uiState by topicViewModel.uiState.collectAsState()
     val hasPremiumAccess by subscriptionViewModel.hasPremiumAccess.collectAsState()
-    // val premiumProductDetails by subscriptionViewModel.premiumProductDetails.collectAsState() // Collect for purchase flow
 
     var selectedTab by remember { mutableStateOf(ContentTab.NOTES) }
-    val playerManager = remember { PlayerManager(context) }
+    val playerManager = remember(context) { PlayerManager(context) } // Added context to remember key
 
     DisposableEffect(Unit) {
         onDispose {
@@ -102,7 +98,7 @@ fun TopicContentScreen(
                         icon = {
                             when (tab) {
                                 ContentTab.NOTES -> Icon(Icons.Filled.Description, contentDescription = "Notes")
-                                ContentTab.FAQS -> Icon(Icons.Filled.HelpOutline, contentDescription = "FAQs")
+                                ContentTab.FAQS -> Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = "FAQs") // Corrected Icon
                                 ContentTab.MCQS -> Icon(Icons.Filled.Quiz, contentDescription = "MCQs")
                                 ContentTab.AUDIO -> Icon(Icons.Filled.Audiotrack, contentDescription = "Audio")
                             }
@@ -134,8 +130,8 @@ fun TopicContentScreen(
 fun PremiumLockedOverlay(onClickAction: () -> Unit) {
     Box(
         modifier = Modifier
-            .fillMaxSize() // This will make the overlay fill its parent (the Card's Box) alpha for transparency
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)) 
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)) // Adjusted alpha
             .clickable(onClick = onClickAction),
         contentAlignment = Alignment.Center
     ) {
@@ -179,18 +175,16 @@ fun NotesList(notes: List<Note>, onNoteClick: (String) -> Unit, hasPremiumAccess
             val accessible = isContentAccessible(note.isFreeLaunchContent, note.isPremium, hasPremiumAccess)
             val productDetails by subscriptionViewModel.premiumProductDetails.collectAsState()
 
-
             NoteItemCard(
                 note = note,
                 isBookmarked = isBookmarked,
-                onClick = { 
-                    if (accessible) onNoteClick(note.id) 
+                onClick = {
+                    if (accessible) onNoteClick(note.id)
                     else subscriptionViewModel.launchPurchaseFlow(context as Activity, productDetails)
                 },
                 onBookmarkToggle = { isBookmarked = userPrefsHelper.toggleNoteBookmark(note.id) },
                 isLocked = !accessible
             )
-            // Removed the Box wrapper, click handling is now inside NoteItemCard
         }
     }
 }
@@ -265,20 +259,15 @@ fun AudioList(audioItems: List<AudioContent>, playerManager: PlayerManager, hasP
     }
 }
 
-// ... (package, imports, isContentAccessible function, TopicContentScreen, Lists, etc. remain the same) ...
-// --- Individual Item Composables with Lock Indicator ---
-
 @Composable
 fun NoteItemCard(
     note: Note,
     isBookmarked: Boolean,
     onClick: () -> Unit,
     onBookmarkToggle: () -> Unit,
-    isLocked: Boolean // This flag determines if the lock OVERLAY is shown and click is disabled
+    isLocked: Boolean
 ) {
-    // Determine if the padlock icon itself should be shown (premium, not free launch)
     val showPadlockIcon = note.isPremium && !note.isFreeLaunchContent
-
     Box {
         Card(
             modifier = Modifier
@@ -291,11 +280,11 @@ fun NoteItemCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(note.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        if (showPadlockIcon && !isLocked) { // Show padlock if premium (not free launch) & accessible (meaning user is subbed)
+                        if (showPadlockIcon && !isLocked) {
                             Icon(
-                                imageVector = Icons.Filled.LockOpen, // Or just Lock if you prefer
+                                imageVector = Icons.Filled.LockOpen,
                                 contentDescription = "Premium",
-                                tint = MaterialTheme.colorScheme.primary, // Or a gold color
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(16.dp).padding(start = 4.dp)
                             )
                         }
@@ -319,7 +308,7 @@ fun NoteItemCard(
                                 tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    } else { // This is for the main big lock icon when content is actually locked
+                    } else {
                         Icon(
                             imageVector = Icons.Filled.Lock,
                             contentDescription = "Locked",
@@ -346,7 +335,6 @@ fun FaqItem(
 ) {
     var expanded by remember { mutableStateOf(false) }
     val showPadlockIcon = faq.isPremium && !faq.isFreeLaunchContent
-
     Box {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -416,7 +404,6 @@ fun FaqItem(
     }
 }
 
-
 @Composable
 fun McqItem(
     mcq: Mcq,
@@ -428,7 +415,6 @@ fun McqItem(
     var selectedOption by remember { mutableStateOf<String?>(null) }
     var showAnswer by remember { mutableStateOf(false) }
     val showPadlockIcon = mcq.isPremium && !mcq.isFreeLaunchContent
-
     Box {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -436,7 +422,7 @@ fun McqItem(
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { // Changed to CenterVertically
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                          Text(
                             text = mcq.questionText,
@@ -511,7 +497,6 @@ fun McqItem(
     }
 }
 
-
 @Composable
 fun AudioItemCard(
     audio: AudioContent,
@@ -525,7 +510,6 @@ fun AudioItemCard(
     val isThisAudioActive = currentPlayerData.currentPlayingUrl == audio.audioUrl
     val isPlayingThisAudio = isThisAudioActive && currentPlayerData.isActuallyPlaying
     val showPadlockIcon = audio.isPremium && !audio.isFreeLaunchContent
-
     Box {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -546,9 +530,9 @@ fun AudioItemCard(
                             )
                             if (showPadlockIcon && !isLocked) {
                                  Icon(
-                                    imageVector = Icons.Filled.LockOpen,
+                                    imageVector = Icons.Filled.LockOpen, // Or Icons.Filled.Lock for just a padlock
                                     contentDescription = "Premium",
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = MaterialTheme.colorScheme.primary, // Or a gold/yellow color
                                     modifier = Modifier.size(14.dp).padding(start = 4.dp)
                                 )
                             }
@@ -570,9 +554,11 @@ fun AudioItemCard(
                                 )
                             }
                             IconButton(onClick = {
-                                // Click is now handled by the Box overlay if locked
-                                if (isPlayingThisAudio) playerManager.pause()
-                                else playerManager.play(audio.audioUrl)
+                                if (isLocked) onLockedItemClick() // This click will be handled by the overlay if isLocked
+                                else {
+                                    if (isPlayingThisAudio) playerManager.pause()
+                                    else playerManager.play(audio.audioUrl)
+                                }
                             }) {
                                 Icon(
                                     imageVector = if (isPlayingThisAudio) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
@@ -585,7 +571,7 @@ fun AudioItemCard(
                             Icon(
                                 imageVector = Icons.Filled.Lock,
                                 contentDescription = "Locked",
-                                modifier = Modifier.size(24.dp).padding(end = 4.dp), // Placeholder for play icon space
+                                modifier = Modifier.size(24.dp).padding(end = 4.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
                         }
