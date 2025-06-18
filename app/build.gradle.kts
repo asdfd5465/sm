@@ -8,9 +8,19 @@ plugins {
 android {
     namespace = "bankwiser.bankpromotion.material"
     compileSdk = 34
-    assetPacks = mutableSetOf(":contentpack") // phase 78
-    // Retrieve signing information from environment variables
-    // These will be set by the GitHub Actions workflow
+
+    // Correctly configure assetPacks here
+    assetPacks.addAll(listOf(":contentpack")) // Use addAll for a Set
+
+    defaultConfig {
+        applicationId = "bankwiser.bankpromotion.material"
+        minSdk = 26
+        targetSdk = 34
+        versionCode = 18
+        versionName = "1.18"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
     val storeFileFromEnv = System.getenv("SIGNING_KEYSTORE_FILE_PATH") // Custom name for the file path
     val storePasswordFromEnv = System.getenv("SIGNING_KEYSTORE_PASSWORD_ENV") // Custom env var name
     val keyAliasFromEnv = System.getenv("SIGNING_KEY_ALIAS_ENV")         // Custom env var name
@@ -37,15 +47,6 @@ android {
                 println("WARNING: Release signing information not fully provided via CI environment variables. Release build may not be signed or may fail. Missing one or more of: SIGNING_KEYSTORE_FILE_PATH, SIGNING_KEYSTORE_PASSWORD_ENV, SIGNING_KEY_ALIAS_ENV, SIGNING_KEY_PASSWORD_ENV")
             }
         }
-    }
-
-    defaultConfig {
-        applicationId = "bankwiser.bankpromotion.material"
-        minSdk = 26
-        targetSdk = 34
-        versionCode = 18
-        versionName = "1.18"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
