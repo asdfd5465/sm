@@ -17,7 +17,7 @@ const val DATABASE_ENCRYPTION_KEY = "bankwiser" // REPLACE THIS!
 class DatabaseHelper(private val context: Context) {
 
     private val internalDbName = "content.db" // This will be the SQLCipher encrypted DB
-    private val initialBundledAssetDbName = "content_v1_bundled_encrypted.db" // Your initial encrypted DB in app/assets
+    private val initialBundledAssetDbName = "content_v1.db" // Your initial encrypted DB in app/assets
     private val initialBundledAssetPath = "database/$initialBundledAssetDbName"
 
     companion object {
