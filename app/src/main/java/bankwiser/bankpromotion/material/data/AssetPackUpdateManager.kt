@@ -8,7 +8,7 @@ import com.google.android.play.core.assetpacks.AssetPackManager
 import com.google.android.play.core.assetpacks.AssetPackManagerFactory
 import com.google.android.play.core.assetpacks.AssetPackState
 import com.google.android.play.core.assetpacks.AssetPackStateUpdateListener
-import com.google.android.play.core.assetpacks.model.AssetPackStatus
+import com.google.android.play.core.assetpacks.model.AssetPackStatus // Ensure this is imported
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.remoteconfig.ktx.remoteConfig
 import com.google.firebase.remoteconfig.ktx.remoteConfigSettings
@@ -59,10 +59,9 @@ class AssetPackUpdateManager(
         AssetPackStateUpdateListener { state ->
             handleAssetPackStateUpdate(state)
         }
-    
+
     private var isListenerRegistered = false
 
-    // Helper to get string representation of status for logging
     private fun statusToString(@AssetPackStatus status: Int): String {
         return when (status) {
             AssetPackStatus.UNKNOWN -> "UNKNOWN"
@@ -129,12 +128,11 @@ class AssetPackUpdateManager(
         }
     }
 
-
     fun initializeAndCheckRemoteConfig() {
         _updateState.value = UpdateState.CheckingForUpdate
         val remoteConfig = Firebase.remoteConfig
         val configSettings = remoteConfigSettings {
-            minimumFetchIntervalInSeconds = 300 
+            minimumFetchIntervalInSeconds = 300
         }
         remoteConfig.setConfigSettingsAsync(configSettings)
         val defaults = mapOf(
@@ -192,6 +190,7 @@ class AssetPackUpdateManager(
         if (!isListenerRegistered) {
             assetPackManager.registerListener(assetPackStateUpdateListener)
             isListenerRegistered = true
+            Log.d(TAG, "AssetPackStateUpdateListener registered.")
         }
 
         assetPackManager.getPackStates(listOf(packName))
@@ -207,16 +206,18 @@ class AssetPackUpdateManager(
                 Log.d(TAG, "Initial state for $packName: ${statusToString(packState.status())}")
                 when (packState.status()) {
                     AssetPackStatus.NOT_INSTALLED, AssetPackStatus.FAILED, AssetPackStatus.CANCELED -> {
-                        Log.d(TAG, "Fetching pack $packName as it's NOT_INSTALLED, FAILED, or CANCELED.")
+                        Log.d(TAG, "Fetching pack $packName as it's ${statusToString(packState.status())}.")
                         assetPackManager.fetch(listOf(packName))
                             .addOnFailureListener { e ->
                                 Log.e(TAG, "Failed to initiate fetch for asset pack $packName", e)
-                                _updateState.value = UpdateState.DownloadFailed(packName, AssetPackStatus.FAILED) // Corrected
+                                _updateState.value = UpdateState.DownloadFailed(packName, AssetPackStatus.FAILED)
                                 unregisterListener()
                             }
                     }
-                    AssetPackStatus.COMPLETED -> { // Corrected from DOWNLOADED
-                        Log.i(TAG, "Asset pack $packName ALREADY_DOWNLOADED (status COMPLETED). Proceeding to install.")
+                    // AssetPackStatus.DOWNLOADED is a legacy status.
+                    // COMPLETED means it's fully on device and ready.
+                    AssetPackStatus.COMPLETED -> {
+                        Log.i(TAG, "Asset pack $packName ALREADY DOWNLOADED (status COMPLETED). Proceeding to install.")
                         _updateState.value = UpdateState.VerifyingUpdate
                         installDownloadedPack(packName, currentRemoteDbFilename, currentRemoteConfigVersion)
                     }
@@ -230,7 +231,7 @@ class AssetPackUpdateManager(
             }
             .addOnFailureListener { e ->
                 Log.e(TAG, "Failed to get pack states for $packName", e)
-                _updateState.value = UpdateState.DownloadFailed(packName, AssetPackStatus.FAILED) // Corrected
+                _updateState.value = UpdateState.DownloadFailed(packName, AssetPackStatus.FAILED)
                 unregisterListener()
             }
     }
@@ -276,9 +277,14 @@ class AssetPackUpdateManager(
 
     fun unregisterListener() {
         if (isListenerRegistered) {
-            assetPackManager.unregisterListener(assetPackStateUpdateListener)
-            isListenerRegistered = false
-            Log.d(TAG, "AssetPackStateUpdateListener unregistered.")
+            try { // Add try-catch as unregister can sometimes throw if already unregistered.
+                assetPackManager.unregisterListener(assetPackStateUpdateListener)
+                isListenerRegistered = false
+                Log.d(TAG, "AssetPackStateUpdateListener unregistered.")
+            } catch (e: RuntimeException) {
+                Log.w(TAG, "Error unregistering listener (might be already unregistered): ${e.message}")
+                isListenerRegistered = false // Ensure flag is reset
+            }
         }
     }
 }
