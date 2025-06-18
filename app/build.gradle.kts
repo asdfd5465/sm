@@ -79,19 +79,15 @@ android {
         kotlinCompilerExtensionVersion = "1.5.13"
     }
 
-    // Packaging options for native libraries, good for SQLCipher
     packagingOptions {
-        pickFirsts.addAll(listOf(
-            "lib/x86/libsqlcipher.so",
-            "lib/x86_64/libsqlcipher.so",
-            "lib/armeabi-v7a/libsqlcipher.so",
-            "lib/arm64-v8a/libsqlcipher.so"
-        ))
-        // Exclude duplicate meta-inf files if they cause issues, though usually not needed for SQLCipher alone
-        // exclude("META-INF/LICENSE.txt")
-        // exclude("META-INF/NOTICE.txt")
+    jniLibs.pickFirsts.addAll(listOf(
+        "lib/x86/libsqlcipher.so",
+        "lib/x86_64/libsqlcipher.so",
+        "lib/armeabi-v7a/libsqlcipher.so",
+        "lib/arm64-v8a/libsqlcipher.so"
+    ))
+    }
 }
-
 dependencies {
     // AndroidX Core & Lifecycle
     implementation("androidx.core:core-ktx:1.13.1")
