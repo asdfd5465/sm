@@ -228,7 +228,7 @@ fun HomeHeader(user: FirebaseUser?, onSignOutClick: () -> Unit) {
         actions = {
             IconButton(onClick = onSignOutClick) {
                 Icon(
-                    imageVector = Icons.Filled.ExitToApp,
+                    imageVector = Icons.AutoMirrored.Filled.ExitToApp, // Corrected Icon
                     contentDescription = "Sign Out",
                     tint = TextOnPrimary
                 )
