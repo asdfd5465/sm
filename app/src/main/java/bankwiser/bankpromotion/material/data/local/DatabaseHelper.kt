@@ -15,7 +15,7 @@ const val DATABASE_ENCRYPTION_KEY = "bankwiser" // Your key from the repo
 class DatabaseHelper(private val context: Context) {
 
     private val internalDbName = "content.db"
-    private val initialBundledAssetDbName = "content_v1.db" // From your repo
+    private val initialBundledAssetDbName = "content_v1_initial_bundled.db" // From your repo
     private val initialBundledAssetPath = "database/$initialBundledAssetDbName"
 
     companion object {
