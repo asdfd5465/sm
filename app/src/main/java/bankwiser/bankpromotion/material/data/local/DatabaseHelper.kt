@@ -11,7 +11,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 
 // Ensure DATABASE_ENCRYPTION_KEY is defined, e.g.:
-// const val DATABASE_ENCRYPTION_KEY = "your_actual_secret_key"
+const val DATABASE_ENCRYPTION_KEY = "bankwiser"
 
 class DatabaseHelper(private val context: Context) {
 
