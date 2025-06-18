@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "BankWiser Pro"
 include(":app")
+include(":contentpack")
