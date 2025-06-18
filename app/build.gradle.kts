@@ -16,8 +16,8 @@ android {
         applicationId = "bankwiser.bankpromotion.material"
         minSdk = 26
         targetSdk = 34
-        versionCode = 18
-        versionName = "1.18"
+        versionCode = 20
+        versionName = "1.20"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -51,8 +51,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("release")
         }
