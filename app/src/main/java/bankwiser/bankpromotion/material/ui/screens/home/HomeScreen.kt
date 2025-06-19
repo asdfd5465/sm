@@ -81,8 +81,7 @@ fun HomeScreen(
                 updateState = updateState,
                 onDownloadConfirm = { assetPackUpdateManager.startUpdateProcess() },
                 onDismiss = {
-                    // Handle dismiss, e.g., set updateState to Idle if appropriate
-                    // For now, doing nothing on dismiss of prompts
+                    assetPackUpdateManager.userDismissedPrompt()
                 }
             )
 
