@@ -1,6 +1,7 @@
 package bankwiser.bankpromotion.material.ui.screens.profile
 
 import android.app.Activity
+import androidx.compose.foundation.background // <<< IMPORT ADDED
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -23,7 +24,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.R
 import bankwiser.bankpromotion.material.auth.AuthViewModel
-import bankwiser.bankpromotion.material.billing.PREMIUM_SUBSCRIPTION_ID
+// import bankwiser.bankpromotion.material.billing.PREMIUM_SUBSCRIPTION_ID // Not directly used here
 import bankwiser.bankpromotion.material.data.local.THEME_DARK
 import bankwiser.bankpromotion.material.data.local.THEME_LIGHT
 import bankwiser.bankpromotion.material.data.local.THEME_SYSTEM
@@ -36,26 +37,25 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    authViewModel: AuthViewModel = viewModel(), // For sign out
-    subscriptionViewModel: SubscriptionViewModel = viewModel(), // For subscription status & purchase
-    onNavigateToLogin: () -> Unit,
-    onManageDownloads: () -> Unit, // Placeholder for future
-    onHelpAndFeedback: () -> Unit, // Placeholder
-    onRateApp: () -> Unit, // Placeholder
-    onTermsAndPrivacy: () -> Unit // Placeholder
+    authViewModel: AuthViewModel = viewModel(),
+    subscriptionViewModel: SubscriptionViewModel = viewModel(),
+    onNavigateToLogin: () -> Unit, // This might not be needed if AppNavigation handles it
+    onManageDownloads: () -> Unit,
+    onHelpAndFeedback: () -> Unit,
+    onRateApp: () -> Unit,
+    onTermsAndPrivacy: () -> Unit
 ) {
     val context = LocalContext.current
     val application = context.applicationContext as BankWiserApplication
     val profileViewModel: ProfileViewModel = viewModel(
-        factory = ViewModelFactory(application.contentRepository, application) // Pass application
+        factory = ViewModelFactory(application.contentRepository, application)
     )
     val profileUiState by profileViewModel.uiState.collectAsState()
-    val authState by authViewModel.authState.collectAsState() // To ensure recomposition on sign out
+    // authState is used indirectly to trigger recomposition when user signs out
+    /*val authState by authViewModel.authState.collectAsState()*/
     val hasPremiumAccess by subscriptionViewModel.hasPremiumAccess.collectAsState()
     val premiumProductDetails by subscriptionViewModel.premiumProductDetails.collectAsState()
 
-
-    // For Sign Out
     val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
         .requestIdToken(context.getString(R.string.default_web_client_id))
         .requestEmail()
@@ -64,11 +64,9 @@ fun ProfileScreen(
 
     var showThemeDialog by remember { mutableStateOf(false) }
 
-    // Update ProfileViewModel's subscription status (could also be done via a shared service/repo)
     LaunchedEffect(hasPremiumAccess) {
         profileViewModel.updateSubscriptionStatus(hasPremiumAccess)
     }
-
 
     Scaffold(
         topBar = {
@@ -87,7 +85,6 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // User Info Section
             profileUiState.user?.let { firebaseUser ->
                 Row(
                     modifier = Modifier
@@ -95,7 +92,6 @@ fun ProfileScreen(
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Placeholder for Avatar - from mockup: A in a circle
                     Box(
                         modifier = Modifier
                             .size(64.dp)
@@ -126,7 +122,7 @@ fun ProfileScreen(
                             Text(
                                 "Premium Member ✨",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF10B981) // Greenish from mockup
+                                color = Color(0xFF10B981)
                             )
                         } else {
                              Text(
@@ -140,57 +136,44 @@ fun ProfileScreen(
                 HorizontalDivider()
             }
 
-            // Settings Items
             ProfileListItem(
-                icon = Icons.Filled.Brightness6, // Or DarkMode / LightMode based on current
+                icon = Icons.Filled.Brightness6,
                 text = "App Theme: ${profileUiState.themePreference.replaceFirstChar { it.uppercase() }}",
                 onClick = { showThemeDialog = true }
             )
-            // TODO: Notification Settings - Later Phase
-            // ProfileListItem(icon = Icons.Filled.Notifications, text = "Notification Settings", onClick = { /* TODO */ })
-
             HorizontalDivider()
-
             ProfileListItem(
-                icon = Icons.Filled.Diamond, // Premium icon
+                icon = Icons.Filled.Diamond,
                 text = if (profileUiState.hasPremiumAccess) "Manage Subscription" else "Upgrade to Premium",
                 onClick = {
-                    // If not subscribed, launch purchase flow. If subscribed, go to Play Store manage subs.
                     if (!profileUiState.hasPremiumAccess) {
                         premiumProductDetails?.let {
                              subscriptionViewModel.launchPurchaseFlow(context as Activity, it)
                         }
                     } else {
-                        // TODO: Link to Google Play manage subscriptions page
-                        // val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/account/subscriptions"))
-                        // context.startActivity(intent)
                          println("TODO: Navigate to Manage Subscriptions in Play Store")
                     }
                 }
             )
             ProfileListItem(icon = Icons.Filled.Download, text = "Manage Downloads", onClick = onManageDownloads)
-
             HorizontalDivider()
-
             ProfileListItem(icon = Icons.Filled.HelpOutline, text = "Help & Feedback", onClick = onHelpAndFeedback)
             ProfileListItem(icon = Icons.Filled.StarRate, text = "Rate BankWiser Pro", onClick = onRateApp)
             ProfileListItem(icon = Icons.Filled.Article, text = "Terms & Privacy", onClick = onTermsAndPrivacy)
-
             HorizontalDivider()
-
             ProfileListItem(
                 icon = Icons.AutoMirrored.Filled.ExitToApp,
                 text = "Logout",
                 onClick = {
                     authViewModel.signOut(googleSignInClient)
-                    // Navigation to login screen is handled by AppNavigation's LaunchedEffect on authState
+                    // onNavigateToLogin() // This is handled by AppNavigation's LaunchedEffect
                 },
                 isDestructive = true
             )
 
             Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = "App Version 1.0.0 (Build ...)", // TODO: Get from BuildConfig
+            Text( // TODO: Get version from BuildConfig
+                text = "App Version 1.0.0 (Build ...)",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
@@ -218,7 +201,7 @@ fun ProfileListItem(icon: ImageVector, text: String, onClick: () -> Unit, isDest
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 16.dp), // Consistent padding
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -234,7 +217,7 @@ fun ProfileListItem(icon: ImageVector, text: String, onClick: () -> Unit, isDest
             color = if (isDestructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
         )
         Spacer(modifier = Modifier.weight(1f))
-        if (!isDestructive) { // Don't show arrow for destructive actions like logout
+        if (!isDestructive) {
             Icon(
                 imageVector = Icons.Filled.ChevronRight,
                 contentDescription = null,
