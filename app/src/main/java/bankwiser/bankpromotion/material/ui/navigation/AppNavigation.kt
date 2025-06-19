@@ -3,6 +3,7 @@ package bankwiser.bankpromotion.material.ui.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person // For Profile Icon
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -27,6 +28,7 @@ import bankwiser.bankpromotion.material.ui.screens.category.SubCategoryScreen
 import bankwiser.bankpromotion.material.ui.screens.home.HomeScreen
 import bankwiser.bankpromotion.material.ui.screens.notes.NoteReaderScreen
 import bankwiser.bankpromotion.material.ui.screens.onboarding.OnboardingScreen
+import bankwiser.bankpromotion.material.ui.screens.profile.ProfileScreen // Import ProfileScreen
 import bankwiser.bankpromotion.material.ui.screens.search.SearchScreen
 import bankwiser.bankpromotion.material.ui.screens.splash.SplashScreen
 import bankwiser.bankpromotion.material.ui.screens.topic.TopicContentScreen
@@ -40,9 +42,17 @@ object Routes {
     const val MAIN_APP_GRAPH = "main_app_graph"
     const val HOME = "home"
     const val SEARCH = "search"
+    const val PROFILE = "profile" // New Profile Route
     const val SUB_CATEGORY_LIST = "subcategories_list/{categoryId}"
-    const val TOPIC_CONTENT = "topic_content/{subCategoryId}/{subCategoryName}" // Name included in route
+    const val TOPIC_CONTENT = "topic_content/{subCategoryId}/{subCategoryName}"
     const val NOTEREADER = "notereader/{noteId}"
+
+    // Placeholder routes for ProfileScreen navigation actions
+    const val MANAGE_DOWNLOADS = "manage_downloads"
+    const val HELP_FEEDBACK = "help_feedback"
+    const val RATE_APP = "rate_app_external" // Indicate it might be an external link
+    const val TERMS_PRIVACY = "terms_privacy"
+
 
     fun subCategoryList(categoryId: String) = "subcategories_list/$categoryId"
     fun topicContent(subCategoryId: String, subCategoryName: String): String {
@@ -99,8 +109,7 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
             arguments = listOf(navArgument("categoryId") { type = NavType.StringType })
         ){
             SubCategoryScreen(
-                onSubCategoryClick = { subCategoryId, subCategoryName -> // Receive name
-                    // Navigate using appNavController to TopicContentScreen
+                onSubCategoryClick = { subCategoryId, subCategoryName ->
                     appNavController.navigate(Routes.topicContent(subCategoryId, subCategoryName))
                 },
                 onNavigateUp = { appNavController.navigateUp() }
@@ -110,14 +119,14 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
             route = Routes.TOPIC_CONTENT,
             arguments = listOf(
                 navArgument("subCategoryId") { type = NavType.StringType },
-                navArgument("subCategoryName") { type = NavType.StringType } // Define arg for name
+                navArgument("subCategoryName") { type = NavType.StringType }
             )
         ) { backStackEntry ->
             val subCategoryName = backStackEntry.arguments?.getString("subCategoryName") ?: "Topic"
             TopicContentScreen(
                 onNoteClick = { noteId -> appNavController.navigate(Routes.noteReader(noteId)) },
                 onNavigateUp = { appNavController.navigateUp() },
-                subCategoryName = subCategoryName // Pass the name
+                subCategoryName = subCategoryName
             )
         }
         composable(
@@ -126,6 +135,12 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
         ) {
             NoteReaderScreen(onNavigateUp = { appNavController.navigateUp() })
         }
+
+        // Placeholder composables for ProfileScreen navigation actions
+        composable(Routes.MANAGE_DOWNLOADS) { Text("Manage Downloads Screen (TODO)") }
+        composable(Routes.HELP_FEEDBACK) { Text("Help & Feedback Screen (TODO)") }
+        composable(Routes.TERMS_PRIVACY) { Text("Terms & Privacy Screen (TODO)") }
+        // RATE_APP would likely launch an external intent (Play Store)
     }
 }
 
@@ -135,7 +150,8 @@ fun MainAppScaffold(authViewModel: AuthViewModel, appNavController: NavHostContr
     val bottomBarNavController = rememberNavController()
     val items = listOf(
         BottomNavItem.Home,
-        BottomNavItem.Search
+        BottomNavItem.Search,
+        BottomNavItem.Profile // Added Profile
     )
     Scaffold(
         bottomBar = {
@@ -171,8 +187,20 @@ fun MainAppScaffold(authViewModel: AuthViewModel, appNavController: NavHostContr
             }
             composable(Routes.SEARCH) {
                  SearchScreen(
-                    onNavigateUp = { /* Root tab, no specific up navigation from here */ },
+                    onNavigateUp = { /* Root tab */ },
                     onNoteClick = { noteId -> appNavController.navigate(Routes.noteReader(noteId))}
+                )
+            }
+            composable(Routes.PROFILE) { // Added ProfileScreen route
+                ProfileScreen(
+                    authViewModel = authViewModel, // Pass authViewModel for sign out
+                    onNavigateToLogin = { // This would be handled by AppNavigation's LaunchedEffect
+                        // No direct navigation needed here as authState change triggers it
+                    },
+                    onManageDownloads = { appNavController.navigate(Routes.MANAGE_DOWNLOADS) },
+                    onHelpAndFeedback = { appNavController.navigate(Routes.HELP_FEEDBACK) },
+                    onRateApp = { /* TODO: Implement Play Store rating intent */ },
+                    onTermsAndPrivacy = { appNavController.navigate(Routes.TERMS_PRIVACY) }
                 )
             }
         }
@@ -182,4 +210,5 @@ fun MainAppScaffold(authViewModel: AuthViewModel, appNavController: NavHostContr
 sealed class BottomNavItem(var title:String, var icon:androidx.compose.ui.graphics.vector.ImageVector, var route:String){
     object Home : BottomNavItem("Home", Icons.Filled.Home, Routes.HOME)
     object Search : BottomNavItem("Search", Icons.Filled.Search, Routes.SEARCH)
+    object Profile : BottomNavItem("Profile", Icons.Filled.Person, Routes.PROFILE) // Added Profile
 }
