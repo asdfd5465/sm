@@ -5,41 +5,51 @@ import android.database.Cursor
 import android.util.Log
 import bankwiser.bankpromotion.material.data.model.*
 import net.sqlcipher.database.SQLiteDatabase
+import net.sqlcipher.database.SQLiteDatabaseHook
 import net.sqlcipher.database.SQLiteException
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 
-const val DATABASE_ENCRYPTION_KEY = "bankwiser"
+const val DATABASE_ENCRYPTION_KEY = "bankwiser" // Your key
 
 class DatabaseHelper(private val context: Context) {
 
     private val internalDbName = "content.db"
-    // This MUST match the EXACT path within your app/src/main/assets/ directory
-    private val initialBundledAssetPath = "database/content_v1_initial_bundled.db" 
+    private val initialBundledAssetDbName = "content_v1_initial_bundled.db" // As per your rename
+    private val initialBundledAssetPath = "database/$initialBundledAssetDbName"
 
     companion object {
         private const val TAG = "DatabaseHelper"
         @Volatile
-        private var isSqlCipherLoaded = false
-        private val loadLock = Any()
+        var isSqlCipherLoaded = false
     }
 
     init {
-        ensureSqlCipherLoaded(context.applicationContext)
+        ensureSqlCipherLoaded()
     }
 
-    private fun ensureSqlCipherLoaded(appContext: Context) {
-        synchronized(loadLock) {
+    private val sqlCipherV3CompatibilityHook = object : SQLiteDatabaseHook {
+        override fun preKey(database: SQLiteDatabase?) {
+            // No operation needed before keying
+        }
+
+        override fun postKey(database: SQLiteDatabase?) {
+            database?.rawExecSQL("PRAGMA cipher_compatibility = 3;")
+            Log.i(TAG, "Executed PRAGMA cipher_compatibility = 3 via SQLiteDatabaseHook.")
+        }
+    }
+
+    private fun ensureSqlCipherLoaded() {
+        synchronized(DatabaseHelper::class.java) {
             if (!isSqlCipherLoaded) {
                 try {
-                    Log.i(TAG, "Attempting to load SQLCipher libraries...")
-                    SQLiteDatabase.loadLibs(appContext)
+                    SQLiteDatabase.loadLibs(context.applicationContext)
                     isSqlCipherLoaded = true
                     Log.i(TAG, "SQLCipher libraries loaded successfully.")
                 } catch (e: UnsatisfiedLinkError) {
                     Log.e(TAG, "CRITICAL: UnsatisfiedLinkError loading SQLCipher.", e)
-                    throw RuntimeException("Failed to load SQLCipher native libraries (UnsatisfiedLinkError)", e)
+                    throw RuntimeException("Failed to load SQLCipher native libraries", e)
                 } catch (e: Exception) {
                     Log.e(TAG, "CRITICAL: An unexpected error occurred loading SQLCipher libraries.", e)
                     throw RuntimeException("Unexpected error loading SQLCipher libraries", e)
@@ -52,105 +62,103 @@ class DatabaseHelper(private val context: Context) {
         return context.getDatabasePath(internalDbName)
     }
 
-    private fun copyInitialBundledDatabase(destinationDbFile: File): Boolean {
-        Log.i(TAG, "Attempting to copy initial bundled asset '$initialBundledAssetPath' to '${destinationDbFile.absolutePath}'")
-        try {
-            context.assets.open(initialBundledAssetPath).use { inputStream ->
-                destinationDbFile.parentFile?.mkdirs() // Ensure directory exists
-                FileOutputStream(destinationDbFile).use { outputStream ->
-                    inputStream.copyTo(outputStream)
-                    Log.i(TAG, "Successfully copied initial bundled encrypted database '$initialBundledAssetPath' to '${destinationDbFile.name}'. File exists: ${destinationDbFile.exists()}")
-                    return destinationDbFile.exists() && destinationDbFile.length() > 0
-                }
-            }
-        } catch (ioe: IOException) {
-            Log.e(TAG, "IOException during copyInitialBundledDatabase for asset '$initialBundledAssetPath' to '${destinationDbFile.name}'", ioe)
-            // If it's a FileNotFoundException for the asset, that's a critical packaging error.
-            if (ioe is java.io.FileNotFoundException && ioe.message?.contains(initialBundledAssetPath, ignoreCase = true) == true) {
-                Log.e(TAG, "CRITICAL: Bundled asset DB file NOT FOUND at path: $initialBundledAssetPath. Check your app/src/main/assets structure.")
-            }
-            return false // Indicate copy failure
-        } catch (e: Exception) {
-            Log.e(TAG, "Unexpected error during copyInitialBundledDatabase", e)
-            return false // Indicate copy failure
-        }
-    }
-
-    private fun openDatabase(): SQLiteDatabase {
-        ensureSqlCipherLoaded(context.applicationContext)
+    private fun openDatabase(isInitialCopyAttempt: Boolean = false): SQLiteDatabase {
+        ensureSqlCipherLoaded()
         val dbFile = getInternalDatabaseFile()
-        var dbJustCopied = false
 
-        if (!dbFile.exists()) {
-            Log.d(TAG, "Internal DB '${dbFile.name}' not found. Attempting to copy initial bundled version.")
-            if (!copyInitialBundledDatabase(dbFile)) {
-                // If copy fails, dbFile will still not exist.
-                Log.e(TAG, "FATAL: Failed to copy initial bundled database. Cannot open database.")
-                throw RuntimeException("Initial DB copy failed, cannot proceed to open database.")
+        if (!dbFile.exists() && !isInitialCopyAttempt) { // Avoid recursive copy if initial copy itself fails
+            Log.d(TAG, "Internal DB '${dbFile.name}' not found. Copying initial bundled version.")
+            try {
+                copyInitialBundledDatabase(dbFile)
+            } catch (e: IOException) {
+                Log.e(TAG, "FATAL: Error copying initial bundled DB.", e)
+                throw RuntimeException("Error creating source DB from asset", e)
             }
-            dbJustCopied = true // Flag that we just copied it
+        } else if (!dbFile.exists() && isInitialCopyAttempt) {
+            // This means copyInitialBundledDatabase was called, it failed, and we are trying again.
+            // This shouldn't happen if copyInitialBundledDatabase throws an exception.
+             Log.e(TAG, "FATAL: Initial DB copy seems to have failed, and file still doesn't exist.")
+             throw RuntimeException("Initial DB copy failed, cannot open.")
         }
+
 
         Log.d(TAG, "Attempting to open DB: ${dbFile.path} with key: '$DATABASE_ENCRYPTION_KEY'")
         var db: SQLiteDatabase? = null
         try {
-            db = SQLiteDatabase.openOrCreateDatabase(dbFile, "", null, null)
-            Log.i(TAG, "DB opened with empty key to set PRAGMAs.")
+            // Step 1: Open the database file, providing the key directly.
+            // The hook for SQLCipher V3 compatibility will handle PRAGMA settings.
+            db = SQLiteDatabase.openOrCreateDatabase(dbFile, DATABASE_ENCRYPTION_KEY, null, sqlCipherV3CompatibilityHook)
 
-            db.execSQL("PRAGMA cipher_compatibility = 3;")
-            Log.i(TAG, "Executed: PRAGMA cipher_compatibility = 3;")
+            // Key is now provided directly to openOrCreateDatabase.
+            // The PRAGMA key command is no longer needed here.
+            // The hook sqlCipherV3CompatibilityHook handles PRAGMA cipher_compatibility = 3.
 
-            val keyStatement = "PRAGMA key = ?;"
-            db.execSQL(keyStatement, arrayOf<Any>(DATABASE_ENCRYPTION_KEY))
-            Log.i(TAG, "PRAGMA key = '$DATABASE_ENCRYPTION_KEY' executed via execSQL.")
-
+            // Step 2: Verify decryption by trying a simple query
             db.rawQuery("SELECT count(*) FROM sqlite_master;", null).use { cursor ->
-                if (cursor.moveToFirst() && cursor.getInt(0) > 0) { // Check for positive count
-                    Log.i(TAG, "SQLCipher DB opened and keyed successfully. sqlite_master count: ${cursor.getInt(0)}")
+                if (cursor.moveToFirst()) {
+                    val count = cursor.getInt(0)
+                    Log.i(TAG, "SQLCipher DB opened successfully. sqlite_master count: $count")
                 } else {
-                    Log.e(TAG, "Verification query (sqlite_master count) failed or returned zero after keying. DB might be empty or key/compatibility wrong.")
-                    throw SQLiteException("Verification query failed (sqlite_master count ${cursor.getInt(0)}).")
+                    throw SQLiteException("Verification query failed after keying (no rows in sqlite_master count).")
                 }
             }
             return db
         } catch (e: SQLiteException) {
-            Log.e(TAG, "SQLCipher Error during open/keying process: ${e.message}. Path: ${dbFile.absolutePath}", e)
-            db?.close()
+            Log.e(TAG, "SQLCipher Error during open/keying: ${e.message}. Path: ${dbFile.absolutePath}", e)
+            db?.close() // Ensure DB is closed if an error occurs during this process
 
-            // If it was a freshly copied DB and it still fails, the bundled asset or key is the problem.
-            if (dbJustCopied) {
-                Log.e(TAG, "FATAL: SQLCipher failed to open DB even after a fresh asset copy. Check bundled asset ('$initialBundledAssetPath') encryption and key ('$DATABASE_ENCRYPTION_KEY').", e)
-                throw RuntimeException("SQLCipher failed to open DB after fresh asset copy. Key or bundled asset is likely incorrect.", e)
-            } else if (dbFile.exists()){ 
-                // If it wasn't just copied and failed, it might be an old corrupted internal DB. Try deleting and re-copying ONCE.
-                Log.w(TAG, "Open/keying failed on existing internal DB. Deleting and attempting recopy from asset ONCE.")
+            // If this is the first attempt after a fresh copy (or potential recopy) and it fails,
+            // it's a more severe issue (wrong key, truly corrupt file, or SQLCipher lib load issue).
+            if (isInitialCopyAttempt && dbFile.exists()) {
+                 Log.e(TAG, "SQLCipher failed to open DB even after ensuring it's a fresh copy from assets. Key or file is likely the issue.")
+                 throw RuntimeException("SQLCipher failed to open DB after fresh asset copy. Key: '$DATABASE_ENCRYPTION_KEY', File: ${dbFile.name}", e)
+            } else if (dbFile.exists() && !isInitialCopyAttempt) { // If it's not the initial copy attempt, try deleting and re-copying once.
+                Log.w(TAG, "Attempting to delete and recopy potentially problematic DB: ${dbFile.name}")
                 dbFile.delete()
-                // Recursive call implies isRetryAttempt was removed, the dbJustCopied handles the "once" logic
-                return openDatabase() // This will trigger copyInitialBundledDatabase again
+                try {
+                    copyInitialBundledDatabase(dbFile) // This function is now only for the initial bundled asset
+                    Log.i(TAG, "Re-copied bundled DB. Retrying open with isInitialCopyAttempt=true...")
+                    // Recursive call, but with a flag to prevent infinite loop on copy failure
+                    return openDatabase(isInitialCopyAttempt = true) 
+                } catch (ioe: IOException) {
+                    Log.e(TAG, "FATAL: Failed to recopy bundled DB after open error.", ioe)
+                    throw RuntimeException("Failed to recover DB after open error.", ioe)
+                }
             }
-            // If dbFile didn't exist and copy failed before this point, that throw would have happened.
-            // If it's some other SQLiteException not related to a fresh copy failure.
-            throw RuntimeException("Unhandled SQLCipher open/key failure.", e)
-
+            throw RuntimeException("SQLCipher failed to open DB. Key: '$DATABASE_ENCRYPTION_KEY', File: ${dbFile.name}", e)
         } catch (e: Exception) {
-            Log.e(TAG, "Unexpected general error during database open/keying process.", e)
+            Log.e(TAG, "Unexpected general error opening database.", e)
             db?.close()
             throw RuntimeException("Unexpected error opening database", e)
         }
     }
 
+    private fun copyInitialBundledDatabase(destinationDbFile: File) {
+        context.assets.open(initialBundledAssetPath).use { inputStream ->
+            destinationDbFile.parentFile?.mkdirs()
+            FileOutputStream(destinationDbFile).use { outputStream ->
+                inputStream.copyTo(outputStream)
+                Log.i(TAG, "Initial bundled encrypted database '$initialBundledAssetDbName' copied to '${destinationDbFile.name}'")
+            }
+        }
+    }
 
     fun replaceDatabase(newEncryptedDbFile: File): Boolean {
         val internalDbFile = getInternalDatabaseFile()
         Log.i(TAG, "Attempting to replace internal DB '${internalDbFile.name}' with new DB from '${newEncryptedDbFile.name}'")
         try {
             if (internalDbFile.exists()) {
+                // No need to open/close here, just delete and copy.
+                // Ensure no other part of the app is holding the DB open.
                 if (!internalDbFile.delete()) {
                     Log.e(TAG, "Failed to delete old internal database: ${internalDbFile.absolutePath}")
                     return false
                 }
                 Log.d(TAG, "Old internal database deleted: ${internalDbFile.name}")
+            } else {
+                Log.w(TAG, "Old internal database did not exist at: ${internalDbFile.absolutePath}")
             }
+
             newEncryptedDbFile.copyTo(internalDbFile, overwrite = true)
             Log.i(TAG, "New encrypted database from '${newEncryptedDbFile.name}' successfully copied to '${internalDbFile.name}'")
             return true
@@ -166,10 +174,10 @@ class DatabaseHelper(private val context: Context) {
             db = openDatabase()
             return queryBlock(db)
         } catch (e: SQLiteException) {
-            Log.e(TAG, "SQLCipher Query Exception during readData: ${e.message}", e)
+            Log.e(TAG, "SQLCipher Query Exception: ${e.message}", e)
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "General DB Read Exception during readData: ${e.message}", e)
+            Log.e(TAG, "General DB Read Exception: ${e.message}", e)
             throw e
         } finally {
             try {
@@ -201,7 +209,8 @@ class DatabaseHelper(private val context: Context) {
         return if (index != -1 && !this.isNull(index)) this.getInt(index) == 1 else false
     }
 
-    // --- Data Access Methods (remain unchanged) ---
+    // --- Data Access Methods ---
+    // These remain unchanged from your working version.
     fun getAllCategories(): List<Category> = readData { db ->
         val categories = mutableListOf<Category>()
         db.rawQuery("SELECT category_id, category_name FROM categories", null).use { cursor ->
