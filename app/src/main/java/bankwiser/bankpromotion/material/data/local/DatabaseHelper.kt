@@ -5,7 +5,7 @@ import android.database.Cursor
 import android.util.Log
 import bankwiser.bankpromotion.material.data.model.*
 import net.sqlcipher.database.SQLiteDatabase
-import net.sqlcipher.database.SQLiteException // <<< CORRECTED IMPORT FOR SQLCIPHER
+import net.sqlcipher.database.SQLiteException // Correct import
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -15,7 +15,8 @@ const val DATABASE_ENCRYPTION_KEY = "bankwiser" // Your key from the repo
 class DatabaseHelper(private val context: Context) {
 
     private val internalDbName = "content.db"
-    private val initialBundledAssetDbName = "content_v1_initial_bundled.db" // From your repo
+    // This MUST match the renamed file in app/src/main/assets/database/
+    private val initialBundledAssetDbName = "content_v1_initial_bundled.db" 
     private val initialBundledAssetPath = "database/$initialBundledAssetDbName"
 
     companion object {
@@ -25,6 +26,11 @@ class DatabaseHelper(private val context: Context) {
     }
 
     init {
+        ensureSqlCipherLoaded()
+    }
+
+    // Centralized method to ensure SQLCipher libraries are loaded.
+    private fun ensureSqlCipherLoaded() {
         synchronized(DatabaseHelper::class.java) {
             if (!isSqlCipherLoaded) {
                 try {
@@ -32,9 +38,12 @@ class DatabaseHelper(private val context: Context) {
                     isSqlCipherLoaded = true
                     Log.i(TAG, "SQLCipher libraries loaded successfully.")
                 } catch (e: UnsatisfiedLinkError) {
-                    Log.e(TAG, "CRITICAL: Failed to load SQLCipher native libraries. Check SQLCipher dependency.", e)
+                    Log.e(TAG, "CRITICAL: UnsatisfiedLinkError loading SQLCipher. Native library issue. Check ABI filters, packagingOptions, and ProGuard.", e)
+                    // This error often means the .so files are missing or can't be linked.
+                    throw RuntimeException("Failed to load SQLCipher native libraries", e) // Re-throw to make failure obvious
                 } catch (e: Exception) {
                     Log.e(TAG, "CRITICAL: An unexpected error occurred loading SQLCipher libraries.", e)
+                    throw RuntimeException("Unexpected error loading SQLCipher libraries", e) // Re-throw
                 }
             }
         }
@@ -45,52 +54,58 @@ class DatabaseHelper(private val context: Context) {
     }
 
     private fun openDatabase(): SQLiteDatabase {
+        ensureSqlCipherLoaded() // Call before any DB operation
+
         val dbFile = getInternalDatabaseFile()
 
-        if (!isSqlCipherLoaded) {
-            Log.w(TAG, "SQLCipher not loaded in init, attempting again in openDatabase.")
-            synchronized(DatabaseHelper::class.java) {
-                if (!isSqlCipherLoaded) {
-                    SQLiteDatabase.loadLibs(context.applicationContext)
-                    isSqlCipherLoaded = true
-                }
-            }
-        }
-
         if (!dbFile.exists()) {
-            Log.d(TAG, "Internal database '${dbFile.name}' does not exist. Copying initial bundled encrypted DB.")
+            Log.d(TAG, "Internal database '${dbFile.name}' does not exist. Attempting to copy initial bundled encrypted DB.")
             try {
                 copyInitialBundledDatabase(dbFile)
             } catch (e: IOException) {
-                Log.e(TAG, "Error copying initial bundled database to ${dbFile.absolutePath}", e)
-                throw RuntimeException("Error creating source database from bundled asset", e)
+                Log.e(TAG, "FATAL: Error copying initial bundled database to ${dbFile.absolutePath}", e)
+                throw RuntimeException("Error creating source database from bundled asset", e) // Critical failure
             }
         }
-        Log.d(TAG, "Opening internal encrypted database: ${dbFile.path}")
+        
+        Log.d(TAG, "Attempting to open internal encrypted database: ${dbFile.path} with key: '$DATABASE_ENCRYPTION_KEY'")
         try {
+            // Open (or create if copy failed and file still doesn't exist) the database with the key
             return SQLiteDatabase.openOrCreateDatabase(dbFile, DATABASE_ENCRYPTION_KEY, null)
-        } catch (e: net.sqlcipher.database.SQLiteException) { // Explicitly use fully qualified name
-            Log.e(TAG, "SQLCipher Error opening/creating database: ${e.message}. Key: '$DATABASE_ENCRYPTION_KEY'. File: ${dbFile.absolutePath}", e)
+        } catch (e: SQLiteException) { // Catches net.sqlcipher.database.SQLiteException
+            Log.e(TAG, "SQLCipher Error opening/creating database. Path: ${dbFile.absolutePath}, Key: '$DATABASE_ENCRYPTION_KEY'. Message: ${e.message}", e)
+            // This error specifically "file is not a database" with SQLCipher usually means:
+            // 1. Key is wrong.
+            // 2. File is not actually encrypted with SQLCipher or is corrupted.
+            // 3. SQLCipher native libs didn't load, so it's trying to open it as a plain SQLite file.
+            // Since your Python script works, point 3 is the most suspect if the key is correct in code.
+
+            // Attempt to delete and recopy as a last resort if the file might be corrupted
+            // or wasn't copied correctly initially.
+            Log.w(TAG, "Attempting to delete and recopy potentially corrupted DB: ${dbFile.name}")
             if (dbFile.exists()) {
-                Log.w(TAG, "Attempting to delete potentially corrupted DB and recopy: ${dbFile.name}")
                 dbFile.delete()
             }
             try {
                 copyInitialBundledDatabase(dbFile)
-                return SQLiteDatabase.openOrCreateDatabase(dbFile, DATABASE_ENCRYPTION_KEY, null)
+                Log.i(TAG, "Re-copied bundled DB. Retrying open...")
+                return SQLiteDatabase.openOrCreateDatabase(dbFile, DATABASE_ENCRYPTION_KEY, null) // Retry open
             } catch (ioe: IOException) {
-                 Log.e(TAG, "Failed to recopy bundled DB after open error.", ioe)
+                 Log.e(TAG, "FATAL: Failed to recopy bundled DB after open error.", ioe)
                  throw RuntimeException("Failed to recover database after open error.", ioe)
-            } catch (sqleRecopy: net.sqlcipher.database.SQLiteException) { // Explicitly use fully qualified name
-                Log.e(TAG, "Still failed to open DB after recopy attempt.", sqleRecopy)
-                throw RuntimeException("SQLCipher still failed to open DB after recopy.", sqleRecopy)
+            } catch (sqleRecopy: SQLiteException) {
+                Log.e(TAG, "FATAL: Still failed to open DB with SQLCipher after recopy attempt.", sqleRecopy)
+                throw RuntimeException("SQLCipher still failed to open DB after recopy. Check key and native libs.", sqleRecopy)
             }
+        } catch (e: Exception) { // Catch any other unexpected errors during open
+            Log.e(TAG, "Unexpected general error opening database.", e)
+            throw RuntimeException("Unexpected error opening database", e)
         }
     }
 
     private fun copyInitialBundledDatabase(destinationDbFile: File) {
         context.assets.open(initialBundledAssetPath).use { inputStream ->
-            destinationDbFile.parentFile?.mkdirs()
+            destinationDbFile.parentFile?.mkdirs() 
             FileOutputStream(destinationDbFile).use { outputStream ->
                 inputStream.copyTo(outputStream)
                 Log.i(TAG, "Initial bundled encrypted database '$initialBundledAssetDbName' copied to '${destinationDbFile.name}'")
@@ -103,9 +118,6 @@ class DatabaseHelper(private val context: Context) {
         Log.i(TAG, "Attempting to replace internal DB '${internalDbFile.name}' with new DB from '${newEncryptedDbFile.name}'")
         try {
             if (internalDbFile.exists()) {
-                // Try to close any existing connection IF this helper managed a single global instance.
-                // Since it doesn't, this is mostly about file system lock.
-                // A more robust solution for multi-threaded access would involve explicit connection management.
                 try {
                     val tempDb = SQLiteDatabase.openDatabase(internalDbFile.path, DATABASE_ENCRYPTION_KEY, null, SQLiteDatabase.OPEN_READWRITE)
                     tempDb?.close()
@@ -132,27 +144,27 @@ class DatabaseHelper(private val context: Context) {
     }
 
     private inline fun <T> readData(queryBlock: (SQLiteDatabase) -> T): T {
-        var db: SQLiteDatabase? = null
+        var db: SQLiteDatabase? = null 
         try {
             db = openDatabase()
             return queryBlock(db)
-        } catch (e: net.sqlcipher.database.SQLiteException) { // Explicitly use fully qualified name
+        } catch (e: SQLiteException) { 
             Log.e(TAG, "SQLCipher Query Exception: ${e.message}", e)
-            throw e
-        } catch (e: Exception) {
+            throw e 
+        } catch (e: Exception) { 
             Log.e(TAG, "General DB Read Exception: ${e.message}", e)
             throw e
         } finally {
             try {
                 db?.close()
-            } catch (e: net.sqlcipher.database.SQLiteException) { // Explicitly use fully qualified name
+            } catch (e: SQLiteException) { 
                 Log.e(TAG, "SQLCipher Error closing DB in finally block: ${e.message}", e)
             } catch (e: Exception) {
                 Log.e(TAG, "General Error closing DB in finally block: ${e.message}", e)
             }
         }
     }
-
+    
     private fun Cursor.getColumnIndexSafe(columnName: String): Int {
         return try { this.getColumnIndexOrThrow(columnName) } catch (e: IllegalArgumentException) { -1 }
     }
@@ -166,16 +178,19 @@ class DatabaseHelper(private val context: Context) {
         val index = getColumnIndexSafe(columnName)
         return if (index != -1 && !this.isNull(index)) this.getInt(index) else null
     }
-
+    
     private fun Cursor.getBoolean(columnName: String): Boolean {
         val index = getColumnIndexSafe(columnName)
         return if (index != -1 && !this.isNull(index)) this.getInt(index) == 1 else false
     }
 
-    // --- Data Access Methods (Copied from your version - ensure table names are correct) ---
+    // --- Data Access Methods ---
+    // Your existing data access methods (getAllCategories, getNotes, etc.) are correct
+    // and do not need to change as they operate on the SQLiteDatabase instance.
+    // The key is that this instance is now an SQLCipher one.
+
     fun getAllCategories(): List<Category> = readData { db ->
         val categories = mutableListOf<Category>()
-        // Ensure table name "categories" matches your actual DB schema (it does based on your dump)
         db.rawQuery("SELECT category_id, category_name FROM categories", null).use { cursor ->
             while (cursor.moveToNext()) {
                 categories.add(
