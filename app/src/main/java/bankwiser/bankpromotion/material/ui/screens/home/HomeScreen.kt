@@ -1,14 +1,13 @@
 package bankwiser.bankpromotion.material.ui.screens.home
 
-import android.app.Activity // Required for casting context
+import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.ExitToApp // Corrected import
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -27,7 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.R
 import bankwiser.bankpromotion.material.auth.AuthViewModel
-import bankwiser.bankpromotion.material.data.UpdateState // Import your UpdateState
+import bankwiser.bankpromotion.material.data.UpdateState
 import bankwiser.bankpromotion.material.data.model.Category
 import bankwiser.bankpromotion.material.ui.theme.*
 import bankwiser.bankpromotion.material.ui.viewmodel.HomeViewModel
@@ -36,7 +35,7 @@ import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseUser
-import android.util.Log // For logging in AssetUpdateUI
+import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,14 +46,14 @@ fun HomeScreen(
     subscriptionViewModel: SubscriptionViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val application = context.applicationContext as BankWiserApplication
+    val application = context.applicationContext as BankWiserApplication // Get application
     val repository = application.contentRepository
-    val homeViewModel: HomeViewModel = viewModel(factory = ViewModelFactory(repository))
+    // Pass application to ViewModelFactory
+    val homeViewModel: HomeViewModel = viewModel(factory = ViewModelFactory(repository, application))
     val categories by homeViewModel.categories.collectAsState()
     val authState by authViewModel.authState.collectAsState()
     val hasPremiumAccess by subscriptionViewModel.hasPremiumAccess.collectAsState()
 
-    // For Asset Pack Updates
     val assetPackUpdateManager = application.assetPackUpdateManager
     val updateState by assetPackUpdateManager.updateState.collectAsState()
 
@@ -70,22 +69,18 @@ fun HomeScreen(
                 user = authState.user,
                 onSignOutClick = {
                     authViewModel.signOut(googleSignInClient)
-                    onSignOut()
+                    onSignOut() 
                 }
             )
         }
-    ) { paddingValues ->
-        Column(modifier = Modifier.padding(paddingValues)) { // Changed from Box to Column
-            // --- Asset Pack Update UI ---
+    ) { padding ->
+        Column(modifier = Modifier.padding(padding)) {
             AssetUpdateUI(
                 updateState = updateState,
                 onDownloadConfirm = { assetPackUpdateManager.startUpdateProcess() },
-                onDismiss = {
-                    assetPackUpdateManager.userDismissedPrompt()
-                }
+                onDismiss = { /* TODO: Handle dismiss action if needed */ }
             )
 
-            // --- Temporary Subscription Toggle Button ---
             Button(
                 onClick = {
                     val currentSimulatedStatus = application.userPreferencesHelper.isUserSubscribed()
@@ -98,7 +93,6 @@ fun HomeScreen(
                 Text(if (hasPremiumAccess) "Simulate Unsubscribe" else "Simulate Subscribe")
             }
 
-            // --- Categories List ---
             LazyColumn(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -111,7 +105,6 @@ fun HomeScreen(
     }
 }
 
-// New Composable for Update UI
 @Composable
 fun AssetUpdateUI(
     updateState: UpdateState,
@@ -166,11 +159,7 @@ fun AssetUpdateUI(
             }
         }
         is UpdateState.UpdateComplete -> {
-            // Consider a Snackbar or Toast for a brief period.
-            // This state is transient; the UI will likely recompose due to data refresh.
             Log.i("AssetUpdateUI", "Update to version ${updateState.newVersion} complete.")
-            // Here you might trigger a re-fetch of data for ViewModels if needed
-            // or rely on app restart/re-navigation to pick up the new DB.
         }
         is UpdateState.UpdateFailedInstallation -> {
              AlertDialog(
@@ -182,11 +171,9 @@ fun AssetUpdateUI(
         }
         is UpdateState.RemoteConfigFetchFailed -> {
             Log.w("AssetUpdateUI", "Failed to check for updates (Remote Config).")
-            // Optionally show a non-intrusive message like a Snackbar
         }
         UpdateState.CheckingForUpdate, UpdateState.Idle, UpdateState.NoUpdateNeeded, UpdateState.VerifyingUpdate -> {
-            // No specific prominent UI for these states for now.
-            // A subtle "Checking for updates..." text could be added if desired.
+            // No specific UI for these states
         }
     }
 }
@@ -227,7 +214,7 @@ fun HomeHeader(user: FirebaseUser?, onSignOutClick: () -> Unit) {
         actions = {
             IconButton(onClick = onSignOutClick) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ExitToApp, // Corrected Icon
+                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                     contentDescription = "Sign Out",
                     tint = TextOnPrimary
                 )
