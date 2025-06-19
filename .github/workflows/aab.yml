@@ -1,4 +1,4 @@
-name: Phase7 Release AAB
+name: AAB
 
 on:
   workflow_dispatch: # Allows manual triggering
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build_and_sign_release_aab:
-    name: Build Signed Release AAB 
+    name: AAB 
     runs-on: ubuntu-latest
     # Optional: Condition to run only on manual dispatch or tags
     # if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
@@ -128,7 +128,7 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Build Signed Release AAB
+      - name: AAB
         run: |
           echo "Starting Release AAB Build..."
           ./gradlew clean bundleRelease
