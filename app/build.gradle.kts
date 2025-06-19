@@ -19,6 +19,10 @@ android {
         versionCode = 20
         versionName = "1.20"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+            ndk {
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
+        }
+
     }
 
     val storeFileFromEnv = System.getenv("SIGNING_KEYSTORE_FILE_PATH") // Custom name for the file path
@@ -84,7 +88,8 @@ android {
         "lib/x86/libsqlcipher.so",
         "lib/x86_64/libsqlcipher.so",
         "lib/armeabi-v7a/libsqlcipher.so",
-        "lib/arm64-v8a/libsqlcipher.so"
+        "lib/arm64-v8a/libsqlcipher.so",
+        "lib/**/libsqlcipher.so"
     ))
     }
 }
