@@ -15,16 +15,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
-import bankwiser.bankpromotion.material.billing.PREMIUM_SUBSCRIPTION_ID
 import bankwiser.bankpromotion.material.player.PlayerManager
 import bankwiser.bankpromotion.material.ui.screens.topic.AudioItemCard
 import bankwiser.bankpromotion.material.ui.screens.topic.FaqItem
 import bankwiser.bankpromotion.material.ui.screens.topic.McqItem
 import bankwiser.bankpromotion.material.ui.screens.topic.NoteItemCard
+import bankwiser.bankpromotion.material.ui.screens.topic.isContentAccessible // Import helper
 import bankwiser.bankpromotion.material.ui.viewmodel.SearchViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.SubscriptionViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
-import bankwiser.bankpromotion.material.ui.screens.topic.isContentAccessible // Import helper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,12 +32,13 @@ fun SearchScreen(
     onNoteClick: (noteId: String) -> Unit
 ) {
     val context = LocalContext.current
-    val application = context.applicationContext as BankWiserApplication
+    val application = context.applicationContext as BankWiserApplication // Get application
     val repository = application.contentRepository
     val userPrefsHelper = application.userPreferencesHelper
-    val searchViewModel: SearchViewModel = viewModel(factory = ViewModelFactory(repository))
-    val subscriptionViewModel: SubscriptionViewModel = viewModel() // For subscription status
-    
+    // Pass application to ViewModelFactory
+    val searchViewModel: SearchViewModel = viewModel(factory = ViewModelFactory(repository, application))
+    val subscriptionViewModel: SubscriptionViewModel = viewModel()
+
     val uiState by searchViewModel.uiState.collectAsState()
     val hasPremiumAccess by subscriptionViewModel.hasPremiumAccess.collectAsState()
     var searchQuery by remember { mutableStateOf(uiState.query) }
@@ -50,7 +50,7 @@ fun SearchScreen(
     val effectiveOnNavigateUp = if (uiState.initialScreen && uiState.query.isBlank()) {
         onNavigateUp
     } else if (uiState.query.isNotBlank()) {
-        { searchQuery = "" } 
+        { searchQuery = "" }
     } else {
         onNavigateUp
     }
@@ -114,12 +114,12 @@ fun SearchScreen(
                             NoteItemCard(
                                 note = note,
                                 isBookmarked = isBookmarked,
-                                onClick = { 
-                                    if (accessible) onNoteClick(note.id) 
+                                onClick = {
+                                    if (accessible) onNoteClick(note.id)
                                     else subscriptionViewModel.launchPurchaseFlow(context as Activity, subscriptionViewModel.premiumProductDetails.value)
                                 },
                                 onBookmarkToggle = { isBookmarked = userPrefsHelper.toggleNoteBookmark(note.id) },
-                                isLocked = !accessible // Pass isLocked
+                                isLocked = !accessible
                             )
                         }
                     }
@@ -134,8 +134,8 @@ fun SearchScreen(
                                 faq = faq,
                                 isBookmarked = isBookmarked,
                                 onBookmarkToggle = { isBookmarked = userPrefsHelper.toggleFaqBookmark(faq.id) },
-                                isLocked = !accessible, // Pass isLocked
-                                onLockedItemClick = { subscriptionViewModel.launchPurchaseFlow(context as Activity, subscriptionViewModel.premiumProductDetails.value) } // Pass onLockedItemClick
+                                isLocked = !accessible,
+                                onLockedItemClick = { subscriptionViewModel.launchPurchaseFlow(context as Activity, subscriptionViewModel.premiumProductDetails.value) }
                             )
                         }
                     }
@@ -150,8 +150,8 @@ fun SearchScreen(
                                 mcq = mcq,
                                 isBookmarked = isBookmarked,
                                 onBookmarkToggle = { isBookmarked = userPrefsHelper.toggleMcqBookmark(mcq.id) },
-                                isLocked = !accessible, // Pass isLocked
-                                onLockedItemClick = { subscriptionViewModel.launchPurchaseFlow(context as Activity, subscriptionViewModel.premiumProductDetails.value) } // Pass onLockedItemClick
+                                isLocked = !accessible,
+                                onLockedItemClick = { subscriptionViewModel.launchPurchaseFlow(context as Activity, subscriptionViewModel.premiumProductDetails.value) }
                             )
                         }
                     }
@@ -167,8 +167,8 @@ fun SearchScreen(
                                 playerManager = playerManager,
                                 isBookmarked = isBookmarked,
                                 onBookmarkToggle = { isBookmarked = userPrefsHelper.toggleAudioBookmark(audio.id) },
-                                isLocked = !accessible, // Pass isLocked
-                                onLockedItemClick = { subscriptionViewModel.launchPurchaseFlow(context as Activity, subscriptionViewModel.premiumProductDetails.value) } // Pass onLockedItemClick
+                                isLocked = !accessible,
+                                onLockedItemClick = { subscriptionViewModel.launchPurchaseFlow(context as Activity, subscriptionViewModel.premiumProductDetails.value) }
                             )
                         }
                     }
