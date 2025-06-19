@@ -77,6 +77,23 @@ class AssetPackUpdateManager(
         }
     }
 
+    fun userDismissedPrompt() {
+        Log.d(TAG, "User dismissed the update prompt.")
+        when (_updateState.value) {
+            is UpdateState.UpdateAvailable,
+            is UpdateState.DownloadFailed,
+            is UpdateState.UpdateFailedInstallation,
+            is UpdateState.RemoteConfigFetchFailed -> {
+                Log.i(TAG, "Update prompt dismissed. Setting state to Idle and unregistering listener.")
+                _updateState.value = UpdateState.Idle
+                unregisterListener()
+            }
+            else -> {
+                Log.d(TAG, "User dismissed prompt, but no action taken for state: ${_updateState.value}")
+            }
+        }
+    }
+
     private fun handleAssetPackStateUpdate(state: AssetPackState) {
         Log.d(TAG, "AssetPack State Update: ${state.name()} is ${statusToString(state.status())}, progress: ${state.transferProgressPercentage()}%")
         when (state.status()) {
