@@ -5,7 +5,6 @@ import android.database.Cursor
 import android.util.Log
 import bankwiser.bankpromotion.material.data.model.*
 import net.sqlcipher.database.SQLiteDatabase
-import net.sqlcipher.database.SQLiteDatabaseHook
 import net.sqlcipher.database.SQLiteException
 import java.io.File
 import java.io.FileOutputStream
@@ -16,23 +15,21 @@ const val DATABASE_ENCRYPTION_KEY = "bankwiser" // Your key
 class DatabaseHelper(private val context: Context) {
 
     private val internalDbName = "content.db"
-    private val initialBundledAssetDbName = "content_v1_initial_bundled.db" // As per your rename
+    private val initialBundledAssetDbName = "content_v1_initial_bundled.db"
     private val initialBundledAssetPath = "database/$initialBundledAssetDbName"
 
     companion object {
         private const val TAG = "DatabaseHelper"
         @Volatile
-        private var isSqlCipherLoaded = false // Private to ensure controlled by ensureSqlCipherLoaded
-        private val loadLock = Any() // Lock for loading libraries
+        private var isSqlCipherLoaded = false
+        private val loadLock = Any()
     }
 
     init {
         ensureSqlCipherLoaded(context.applicationContext)
     }
 
-    // Public static method to ensure libraries are loaded, can be called from Application.onCreate
-    // to attempt loading as early as possible.
-    fun ensureSqlCipherLoaded(appContext: Context) {
+    private fun ensureSqlCipherLoaded(appContext: Context) {
         synchronized(loadLock) {
             if (!isSqlCipherLoaded) {
                 try {
@@ -41,9 +38,7 @@ class DatabaseHelper(private val context: Context) {
                     isSqlCipherLoaded = true
                     Log.i(TAG, "SQLCipher libraries loaded successfully.")
                 } catch (e: UnsatisfiedLinkError) {
-                    Log.e(TAG, "CRITICAL: UnsatisfiedLinkError loading SQLCipher. Native library issue.", e)
-                    // This is often due to missing .so files for the device's ABI or incorrect packaging.
-                    // Consider re-throwing or a global error flag.
+                    Log.e(TAG, "CRITICAL: UnsatisfiedLinkError loading SQLCipher.", e)
                     throw RuntimeException("Failed to load SQLCipher native libraries (UnsatisfiedLinkError)", e)
                 } catch (e: Exception) {
                     Log.e(TAG, "CRITICAL: An unexpected error occurred loading SQLCipher libraries.", e)
@@ -59,27 +54,11 @@ class DatabaseHelper(private val context: Context) {
         return context.getDatabasePath(internalDbName)
     }
 
-    // This hook will be executed immediately after the database connection is opened,
-    // but before any other operations (including keying) are performed.
-    private val sqlCipherHook = object : SQLiteDatabaseHook {
-        override fun preKey(database: SQLiteDatabase?) {
-            // Not typically used for v3 compatibility setting, but available.
-        }
-        override fun postKey(database: SQLiteDatabase?) {
-            // This is where we set PRAGMAs for v3 compatibility AFTER the key is applied
-            // However, for opening a v3 DB with v4 library, compatibility PRAGMA should be BEFORE key.
-            // The modern approach is to set PRAGMAs on the connection after open but before key.
-            // For this specific "file is not a database" when keying, the key must be set AFTER compatibility.
-            // So we will set PRAGMAs on the db instance after opening with empty key, then key.
-        }
-    }
-
-
     private fun openDatabase(isRetryAttempt: Boolean = false): SQLiteDatabase {
-        ensureSqlCipherLoaded(context.applicationContext) // Ensure libs are loaded
+        ensureSqlCipherLoaded(context.applicationContext)
         val dbFile = getInternalDatabaseFile()
 
-        if (!dbFile.exists()) {
+        if (!dbFile.exists() && !isRetryAttempt) {
             Log.d(TAG, "Internal DB '${dbFile.name}' not found. Copying initial bundled version.")
             try {
                 copyInitialBundledDatabase(dbFile)
@@ -87,35 +66,32 @@ class DatabaseHelper(private val context: Context) {
                 Log.e(TAG, "FATAL: Error copying initial bundled DB.", e)
                 throw RuntimeException("Error creating source DB from asset for path: ${dbFile.absolutePath}", e)
             }
+        } else if (!dbFile.exists() && isRetryAttempt) {
+             Log.e(TAG, "FATAL: Initial DB copy seems to have failed, and file still doesn't exist.")
+             throw RuntimeException("Initial DB copy failed, cannot open.")
         }
 
         Log.d(TAG, "Attempting to open DB: ${dbFile.path} with key: '$DATABASE_ENCRYPTION_KEY'")
         var db: SQLiteDatabase? = null
         try {
-            // SQLCipher 4.x opening a 3.x encrypted database:
-            // 1. Open with an empty key.
-            // 2. Set PRAGMA cipher_compatibility = 3.
-            // 3. Set PRAGMA key = 'your_real_key'.
-            // 4. Perform a test query.
-
-            // Try to open the database file using an empty passphrase first to allow setting PRAGMAs
-            db = SQLiteDatabase.openOrCreateDatabase(dbFile, "", null, sqlCipherHook)
+            db = SQLiteDatabase.openOrCreateDatabase(dbFile, "", null, null) // Open with empty key, no hook needed here for PRAGMAs
             Log.i(TAG, "DB opened with empty key to set PRAGMAs.")
 
-            // Set PRAGMAs for SQLCipher 3.x compatibility
-            // These are common settings for v3 databases.
             db.execSQL("PRAGMA cipher_compatibility = 3;")
-            // db.execSQL("PRAGMA kdf_iter = 64000;") // Default for SQLCipher v3
-            // db.execSQL("PRAGMA cipher_page_size = 1024;") // Default for SQLCipher v3
-            // db.execSQL("PRAGMA cipher_hmac_algorithm = HMAC_SHA1;") // Default for SQLCipher v3
-            // db.execSQL("PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA1;") // Default for SQLCipher v3
             Log.i(TAG, "Executed: PRAGMA cipher_compatibility = 3;")
 
-            // Now, apply the actual encryption key
-            db.rawQuery("PRAGMA key = '$DATABASE_ENCRYPTION_KEY';").close() // Use rawQuery and close cursor for PRAGMA key
-            Log.i(TAG, "PRAGMA key = '$DATABASE_ENCRYPTION_KEY' executed.")
+            // CORRECTED: Use execSQL for PRAGMA key as it doesn't return a result set
+            // and pass the key as an argument to prevent SQL injection (though less critical for PRAGMA key).
+            // Or, more simply for PRAGMA key, using a direct string is common.
+            // The main issue was calling .close() on a rawQuery for a PRAGMA that might not return a typical cursor.
+            // Using execSQL is safer for PRAGMAs that modify state or don't return rows.
+            val keyStatement = "PRAGMA key = ?;"
+            db.execSQL(keyStatement, arrayOf<Any>(DATABASE_ENCRYPTION_KEY))
+            Log.i(TAG, "PRAGMA key = '$DATABASE_ENCRYPTION_KEY' executed via execSQL.")
+            
+            // Alternative for PRAGMA key if execSQL with arguments causes issues with some SQLCipher versions/drivers:
+            // db.execSQL("PRAGMA key = '$DATABASE_ENCRYPTION_KEY';") // Simpler, often works
 
-            // Verify decryption with a simple query
             db.rawQuery("SELECT count(*) FROM sqlite_master;", null).use { cursor ->
                 if (cursor.moveToFirst()) {
                     val count = cursor.getInt(0)
@@ -128,22 +104,20 @@ class DatabaseHelper(private val context: Context) {
             return db
         } catch (e: SQLiteException) {
             Log.e(TAG, "SQLCipher Error during open/keying process: ${e.message}. Path: ${dbFile.absolutePath}", e)
-            db?.close() // Ensure it's closed if something went wrong
+            db?.close() 
 
             if (!isRetryAttempt && dbFile.exists()) {
                 Log.w(TAG, "Open/keying failed. Deleting potentially corrupt/mismatched DB and retrying with fresh asset copy ONCE.")
                 dbFile.delete()
-                // The copyInitialBundledDatabase will be called by the next openDatabase call if file doesn't exist.
-                // Recursive call with a flag to prevent infinite loop if the bundled asset itself is problematic.
                 return openDatabase(isRetryAttempt = true)
             } else if (isRetryAttempt) {
                 Log.e(TAG, "FATAL: SQLCipher still failed to open/key DB after deleting and recopying from assets. Key: '$DATABASE_ENCRYPTION_KEY'. This likely means the bundled asset is not correctly encrypted for this key/settings, or SQLCipher native libs are not working.", e)
                 throw RuntimeException("SQLCipher open/key failed after retry with fresh asset. Check bundled DB encryption and native libs.", e)
-            } else { // File didn't exist and copy failed, or some other state
+            } else { 
                  Log.e(TAG, "FATAL: SQLCipher open/key failed and not a retry scenario. Key: '$DATABASE_ENCRYPTION_KEY'", e)
                 throw RuntimeException("SQLCipher open/key failed. Check bundled DB and logs.", e)
             }
-        } catch (e: Exception) { // Catch any other unexpected errors
+        } catch (e: Exception) {
             Log.e(TAG, "Unexpected general error during database open/keying process.", e)
             db?.close()
             throw RuntimeException("Unexpected error opening database", e)
@@ -162,7 +136,7 @@ class DatabaseHelper(private val context: Context) {
             }
         } catch (ioe: IOException) {
             Log.e(TAG, "IOException during copyInitialBundledDatabase for ${destinationDbFile.name}", ioe)
-            throw ioe // Re-throw to be caught by caller
+            throw ioe
         }
     }
 
@@ -176,6 +150,8 @@ class DatabaseHelper(private val context: Context) {
                     return false
                 }
                 Log.d(TAG, "Old internal database deleted: ${internalDbFile.name}")
+            } else {
+                Log.w(TAG, "Old internal database did not exist at: ${internalDbFile.absolutePath}")
             }
             newEncryptedDbFile.copyTo(internalDbFile, overwrite = true)
             Log.i(TAG, "New encrypted database from '${newEncryptedDbFile.name}' successfully copied to '${internalDbFile.name}'")
@@ -207,7 +183,7 @@ class DatabaseHelper(private val context: Context) {
             }
         }
     }
-
+    
     private fun Cursor.getColumnIndexSafe(columnName: String): Int {
         return try { this.getColumnIndexOrThrow(columnName) } catch (e: IllegalArgumentException) { -1 }
     }
@@ -221,13 +197,13 @@ class DatabaseHelper(private val context: Context) {
         val index = getColumnIndexSafe(columnName)
         return if (index != -1 && !this.isNull(index)) this.getInt(index) else null
     }
-
+    
     private fun Cursor.getBoolean(columnName: String): Boolean {
         val index = getColumnIndexSafe(columnName)
         return if (index != -1 && !this.isNull(index)) this.getInt(index) == 1 else false
     }
 
-    // --- Data Access Methods (These remain unchanged from your version) ---
+    // --- Data Access Methods ---
     fun getAllCategories(): List<Category> = readData { db ->
         val categories = mutableListOf<Category>()
         db.rawQuery("SELECT category_id, category_name FROM categories", null).use { cursor ->
