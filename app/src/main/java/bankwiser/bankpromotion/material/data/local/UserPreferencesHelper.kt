@@ -2,6 +2,17 @@ package bankwiser.bankpromotion.material.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.compositionLocalOf
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+
+// Define constants for theme preference
+const val THEME_PREFERENCE_KEY = "theme_preference"
+const val THEME_LIGHT = "light"
+const val THEME_DARK = "dark"
+const val THEME_SYSTEM = "system" // Default
 
 class UserPreferencesHelper(context: Context) {
 
@@ -9,16 +20,29 @@ class UserPreferencesHelper(context: Context) {
         context.getSharedPreferences("BankWiserUserPrefs", Context.MODE_PRIVATE)
 
     companion object {
-        // ... (bookmark prefixes remain the same) ...
         private const val BOOKMARKED_NOTES_PREFIX = "bookmarked_note_"
         private const val BOOKMARKED_FAQS_PREFIX = "bookmarked_faq_"
         private const val BOOKMARKED_MCQS_PREFIX = "bookmarked_mcq_"
         private const val BOOKMARKED_AUDIO_PREFIX = "bookmarked_audio_"
 
         private const val IS_SUBSCRIBED_KEY = "is_user_subscribed"
-        private const val CURRENT_DB_VERSION_KEY = "current_db_version" // New
-        const val DEFAULT_BUNDLED_DB_VERSION = 1 // Version of DB bundled with initial APK
+        private const val CURRENT_DB_VERSION_KEY = "current_db_version"
+        const val DEFAULT_BUNDLED_DB_VERSION = 1
     }
+
+    // --- Theme Preference ---
+    private val _themePreferenceFlow = MutableStateFlow(getThemePreference())
+    val themePreferenceFlow: StateFlow<String> = _themePreferenceFlow
+
+    fun getThemePreference(): String {
+        return prefs.getString(THEME_PREFERENCE_KEY, THEME_SYSTEM) ?: THEME_SYSTEM
+    }
+
+    fun setThemePreference(themeValue: String) {
+        prefs.edit().putString(THEME_PREFERENCE_KEY, themeValue).apply()
+        _themePreferenceFlow.value = themeValue // Update the flow
+    }
+
 
     // --- Database Version ---
     fun getCurrentDatabaseVersion(): Int {
@@ -29,19 +53,19 @@ class UserPreferencesHelper(context: Context) {
         prefs.edit().putInt(CURRENT_DB_VERSION_KEY, version).apply()
     }
 
-
     // --- Subscription Status (Simulated) ---
-    // ... (isUserSubscribed and setUserSubscribed remain the same) ...
+    private val _isUserSubscribedFlow = MutableStateFlow(isUserSubscribed())
+    val isUserSubscribedFlow: StateFlow<Boolean> = _isUserSubscribedFlow
     fun isUserSubscribed(): Boolean {
         return prefs.getBoolean(IS_SUBSCRIBED_KEY, false)
     }
 
     fun setUserSubscribed(isSubscribed: Boolean) {
         prefs.edit().putBoolean(IS_SUBSCRIBED_KEY, isSubscribed).apply()
+        _isUserSubscribedFlow.value = isSubscribed // Update the flow
     }
 
     // --- Bookmark Functions ---
-    // ... (all bookmark functions remain the same) ...
     private fun isBookmarked(itemId: String, prefix: String): Boolean {
         return prefs.getBoolean(prefix + itemId, false)
     }
@@ -71,3 +95,7 @@ class UserPreferencesHelper(context: Context) {
             .toSet()
     }
 }
+
+// CompositionLocal for UserPreferencesHelper for easier access in Composables if needed
+// Not strictly necessary if only ViewModels access it, but can be handy.
+val LocalUserPreferencesHelper: ProvidableCompositionLocal<UserPreferencesHelper?> = compositionLocalOf { null }
