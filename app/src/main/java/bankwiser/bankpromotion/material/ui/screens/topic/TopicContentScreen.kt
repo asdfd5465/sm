@@ -531,19 +531,25 @@ fun AudioItemCard(
     onLockedItemClick: () -> Unit,
     downloadViewModel: DownloadViewModel
 ) {
-    val context = LocalContext.current // Get context for UserPreferencesHelper
+    val context = LocalContext.current
     val userPrefsHelper = (context.applicationContext as BankWiserApplication).userPreferencesHelper
 
     val currentPlayerData by playerManager.playerState.collectAsState()
     val downloadedPath = userPrefsHelper.getDownloadedAudioPath(audio.id)
-    val contentIdentifierToPlay = downloadedPath ?: audio.audioUrl
-    val isPlayingThisAudio = playerManager.isCurrentlyPlaying(contentIdentifierToPlay)
+    // This is the identifier that PlayerManager uses for its currentPlayingUrlOrPath
+    val contentIdentifierBeingPlayedOrCued = currentPlayerData.currentPlayingUrlOrPath 
+    // This is the identifier for THIS audio item (local path if downloaded, else URL)
+    val thisAudioItemIdentifier = downloadedPath ?: audio.audioUrl
+
+    val isThisAudioCurrentlyCuedOrPlaying = contentIdentifierBeingPlayedOrCued == thisAudioItemIdentifier
+    val isActuallyPlayingThisAudio = isThisAudioCurrentlyCuedOrPlaying && currentPlayerData.isActuallyPlaying
+
 
     val showPadlockIcon = audio.isPremium && !audio.isFreeLaunchContent
 
     val downloadStates by downloadViewModel.downloadStates.collectAsState()
     val specificDownloadState = downloadStates[audio.id] ?: DownloadUiState.Idle
-    var isDownloaded by remember(audio.id, downloadedPath) { // Key remember with downloadedPath
+    var isDownloaded by remember(audio.id, downloadedPath) {
         mutableStateOf(downloadedPath != null)
     }
 
@@ -562,7 +568,7 @@ fun AudioItemCard(
                     Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                              Text(
-                                audio.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium,
+                                audio.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
                                 color = if (isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else LocalContentColor.current,
                                 maxLines = 2, overflow = TextOverflow.Ellipsis
                             )
@@ -599,14 +605,14 @@ fun AudioItemCard(
                                 is DownloadUiState.Success -> {
                                    LaunchedEffect(audio.id) { isDownloaded = true }
                                     IconButton(onClick = {
-                                        val localPath = userPrefsHelper.getDownloadedAudioPath(audio.id)
-                                        if (localPath != null) {
-                                            if (isPlayingThisAudio) playerManager.pause()
-                                            else playerManager.play(localPath, isLocalEncrypted = true)
+                                        val localPathForPlayback = userPrefsHelper.getDownloadedAudioPath(audio.id)
+                                        if (localPathForPlayback != null) {
+                                            if (isActuallyPlayingThisAudio) playerManager.pause()
+                                            else playerManager.play(localPathForPlayback, isLocalEncrypted = true)
                                         }
                                     }) {
                                         Icon(
-                                            imageVector = if (isPlayingThisAudio) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
+                                            imageVector = if (isActuallyPlayingThisAudio) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
                                             contentDescription = "Play/Pause", modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary
                                         )
                                     }
@@ -622,24 +628,24 @@ fun AudioItemCard(
                                         }
                                     }
                                 }
-                                is DownloadUiState.Idle -> { // Check isDownloaded state here
+                                is DownloadUiState.Idle -> {
                                     if (isDownloaded) {
                                         IconButton(onClick = {
-                                            val localPath = userPrefsHelper.getDownloadedAudioPath(audio.id)
-                                            if (localPath != null) {
-                                                if (isPlayingThisAudio) playerManager.pause()
-                                                else playerManager.play(localPath, isLocalEncrypted = true)
+                                            val localPathForPlayback = userPrefsHelper.getDownloadedAudioPath(audio.id)
+                                            if (localPathForPlayback != null) {
+                                                if (isActuallyPlayingThisAudio) playerManager.pause()
+                                                else playerManager.play(localPathForPlayback, isLocalEncrypted = true)
                                             } else {
-                                                isDownloaded = false // Should ideally not happen if isDownloaded is true
+                                                isDownloaded = false
                                                 downloadViewModel.downloadAndEncryptAudio(audio.id, audio.audioUrl)
                                             }
                                         }) {
                                             Icon(
-                                                imageVector = if (isPlayingThisAudio) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
+                                                imageVector = if (isActuallyPlayingThisAudio) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
                                                 contentDescription = "Play/Pause", modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary
                                             )
                                         }
-                                    } else { // Not downloaded, show download button
+                                    } else {
                                         IconButton(onClick = { downloadViewModel.downloadAndEncryptAudio(audio.id, audio.audioUrl) }) {
                                             Icon(Icons.Filled.DownloadForOffline, "Download Audio", modifier = Modifier.size(32.dp))
                                         }
@@ -657,8 +663,8 @@ fun AudioItemCard(
                         }
                     }
                 }
-                // Show error message related to playback for this specific audio item
-                if (!isLocked && isThisAudioActive && currentPlayerData.error != null && currentPlayerData.currentPlayingUrlOrPath == contentIdentifierToPlay) {
+                // CORRECTED: Use isThisAudioCurrentlyCuedOrPlaying for showing error related to this item
+                if (!isLocked && isThisAudioCurrentlyCuedOrPlaying && currentPlayerData.error != null) {
                     Text(
                         text = "Playback Error: ${currentPlayerData.error}",
                         color = MaterialTheme.colorScheme.error,
