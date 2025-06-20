@@ -16,8 +16,8 @@ android {
         applicationId = "bankwiser.bankpromotion.material"
         minSdk = 26
         targetSdk = 34
-        versionCode = 24
-        versionName = "1.24"
+        versionCode = 25
+        versionName = "1.25"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
             ndk {
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
