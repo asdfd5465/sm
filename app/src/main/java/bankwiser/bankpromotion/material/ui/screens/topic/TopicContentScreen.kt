@@ -530,91 +530,141 @@ fun AudioItemCard(
     isBookmarked: Boolean,
     onBookmarkToggle: () -> Unit,
     isLocked: Boolean,
-    onLockedItemClick: () -> Unit
+    onLockedItemClick: () -> Unit,
+    downloadViewModel: DownloadViewModel // Receive DownloadViewModel
 ) {
+    val context = LocalContext.current
+    val application = context.applicationContext as BankWiserApplication
+    val userPrefsHelper = application.userPreferencesHelper
+
     val currentPlayerData by playerManager.playerState.collectAsState()
-    val isThisAudioActive = currentPlayerData.currentPlayingUrl == audio.audioUrl
-    val isPlayingThisAudio = isThisAudioActive && currentPlayerData.isActuallyPlaying
+    val isPlayingThisAudio = playerManager.isCurrentlyPlaying(userPrefsHelper.getDownloadedAudioPath(audio.id) ?: audio.audioUrl)
+
     val showPadlockIcon = audio.isPremium && !audio.isFreeLaunchContent
-    Box {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            shape = MaterialTheme.shapes.large
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                             Text(
-                                audio.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium,
-                                color = if (isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else LocalContentColor.current
-                            )
-                            if (showPadlockIcon && !isLocked) {
-                                 Icon(
-                                    imageVector = Icons.Filled.LockOpen, // Or Icons.Filled.Lock for just a padlock
-                                    contentDescription = "Premium",
-                                    tint = MaterialTheme.colorScheme.primary, // Or a gold/yellow color
-                                    modifier = Modifier.size(14.dp).padding(start = 4.dp)
-                                )
-                            }
-                        }
-                        audio.durationSeconds?.let {
-                            Text(
-                                "${it / 60}:${String.format("%02d", it % 60)}", style = MaterialTheme.typography.bodySmall,
-                                color = if (isLocked) TextSecondary.copy(alpha = 0.5f) else TextSecondary
+
+    // Download State
+    val downloadState by downloadViewModel.downloadStates.collectAsState()
+    val specificDownloadState = downloadState[audio.id] ?: DownloadUiState.Idle
+    var isDownloaded by remember(audio.id) { mutableStateOf(downloadViewModel.isAudioDownloaded(audio.id)) }
+
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = MaterialTheme.shapes.large
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                         Text(
+                            audio.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium,
+                            color = if (isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else LocalContentColor.current,
+                            maxLines = 2, overflow = TextOverflow.Ellipsis
+                        )
+                        if (showPadlockIcon && !isLocked) {
+                             Icon(
+                                imageVector = Icons.Filled.LockOpen,
+                                contentDescription = "Premium",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(14.dp).padding(start = 4.dp)
                             )
                         }
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (!isLocked) {
-                            IconButton(onClick = onBookmarkToggle, modifier = Modifier.size(32.dp)) {
-                                Icon(
-                                    imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                                    contentDescription = "Bookmark Audio",
-                                    tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            IconButton(onClick = {
-                                if (isLocked) onLockedItemClick() // This click will be handled by the overlay if isLocked
-                                else {
-                                    if (isPlayingThisAudio) playerManager.pause()
-                                    else playerManager.play(audio.audioUrl)
-                                }
-                            }) {
-                                Icon(
-                                    imageVector = if (isPlayingThisAudio) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
-                                    contentDescription = if (isPlayingThisAudio) "Pause" else "Play",
-                                    modifier = Modifier.size(40.dp),
-                                    tint = if (isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        } else {
-                            Icon(
-                                imageVector = Icons.Filled.Lock,
-                                contentDescription = "Locked",
-                                modifier = Modifier.size(24.dp).padding(end = 4.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
-                        }
+                    audio.durationSeconds?.let {
+                        Text(
+                            "${it / 60}:${String.format("%02d", it % 60)}", style = MaterialTheme.typography.bodySmall,
+                            color = if (isLocked) TextSecondary.copy(alpha = 0.5f) else TextSecondary
+                        )
                     }
                 }
-                if (!isLocked && isThisAudioActive && currentPlayerData.error != null) {
-                    Text(
-                        text = "Error: ${currentPlayerData.error}",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (!isLocked) {
+                        IconButton(onClick = onBookmarkToggle, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                                contentDescription = "Bookmark Audio",
+                                tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // Play/Pause or Download Button
+                        when (specificDownloadState) {
+                            is DownloadUiState.InProgress -> {
+                                CircularProgressIndicator(modifier = Modifier.size(32.dp), strokeWidth = 2.dp)
+                            }
+                            is DownloadUiState.Success -> { // This means download just finished, update isDownloaded
+                               LaunchedEffect(Unit) { isDownloaded = true }
+                                IconButton(onClick = {
+                                    val localPath = userPrefsHelper.getDownloadedAudioPath(audio.id)
+                                    if (localPath != null) {
+                                        if (isPlayingThisAudio) playerManager.pause()
+                                        else playerManager.play(localPath, isLocalEncrypted = true)
+                                    }
+                                }) {
+                                    Icon(
+                                        imageVector = if (isPlayingThisAudio) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
+                                        contentDescription = "Play/Pause", modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                            is DownloadUiState.Error -> {
+                                TooltipBox(
+                                    tooltip = { PlainTooltip { Text(specificDownloadState.message) } },
+                                    state = rememberTooltipState()
+                                ) {
+                                    IconButton(onClick = { downloadViewModel.downloadAndEncryptAudio(audio.id, audio.audioUrl) }) {
+                                        Icon(Icons.Filled.ErrorOutline, "Download Error, Tap to retry", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(32.dp))
+                                    }
+                                }
+                            }
+                            else -> { // Idle or if isDownloaded is true from a previous session
+                                if (isDownloaded) {
+                                    IconButton(onClick = {
+                                        val localPath = userPrefsHelper.getDownloadedAudioPath(audio.id)
+                                        if (localPath != null) {
+                                            if (isPlayingThisAudio) playerManager.pause()
+                                            else playerManager.play(localPath, isLocalEncrypted = true)
+                                        } else { // Should not happen if isDownloaded is true
+                                            isDownloaded = false // Correct state
+                                            downloadViewModel.downloadAndEncryptAudio(audio.id, audio.audioUrl)
+                                        }
+                                    }) {
+                                        Icon(
+                                            imageVector = if (isPlayingThisAudio) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
+                                            contentDescription = "Play/Pause", modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                } else { // Not downloaded, show download button
+                                    IconButton(onClick = { downloadViewModel.downloadAndEncryptAudio(audio.id, audio.audioUrl) }) {
+                                        Icon(Icons.Filled.DownloadForOffline, "Download Audio", modifier = Modifier.size(32.dp))
+                                    }
+                                }
+                            }
+                        }
+
+                    } else { // Content is Locked
+                        Icon(
+                            imageVector = Icons.Filled.Lock,
+                            contentDescription = "Locked",
+                            modifier = Modifier.size(24.dp).padding(end = 4.dp).clickable(onClick = onLockedItemClick),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
                 }
             }
-        }
-        if (isLocked) {
-            PremiumLockedOverlay(onClickAction = onLockedItemClick)
+            if (!isLocked && isThisAudioActive && currentPlayerData.error != null) {
+                Text(
+                    text = "Error: ${currentPlayerData.error}",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
         }
     }
 }
