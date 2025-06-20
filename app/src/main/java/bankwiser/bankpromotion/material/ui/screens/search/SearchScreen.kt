@@ -13,6 +13,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel // Import ViewModel
+import androidx.lifecycle.ViewModelProvider // Import ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
 import bankwiser.bankpromotion.material.player.PlayerManager
@@ -20,7 +22,8 @@ import bankwiser.bankpromotion.material.ui.screens.topic.AudioItemCard
 import bankwiser.bankpromotion.material.ui.screens.topic.FaqItem
 import bankwiser.bankpromotion.material.ui.screens.topic.McqItem
 import bankwiser.bankpromotion.material.ui.screens.topic.NoteItemCard
-import bankwiser.bankpromotion.material.ui.screens.topic.isContentAccessible // Import helper
+import bankwiser.bankpromotion.material.ui.screens.topic.isContentAccessible
+import bankwiser.bankpromotion.material.ui.viewmodel.DownloadViewModel // Import DownloadViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.SearchViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.SubscriptionViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.ViewModelFactory
@@ -32,10 +35,9 @@ fun SearchScreen(
     onNoteClick: (noteId: String) -> Unit
 ) {
     val context = LocalContext.current
-    val application = context.applicationContext as BankWiserApplication // Get application
+    val application = context.applicationContext as BankWiserApplication
     val repository = application.contentRepository
     val userPrefsHelper = application.userPreferencesHelper
-    // Pass application to ViewModelFactory
     val searchViewModel: SearchViewModel = viewModel(factory = ViewModelFactory(repository, application))
     val subscriptionViewModel: SubscriptionViewModel = viewModel()
 
@@ -162,13 +164,27 @@ fun SearchScreen(
                                 mutableStateOf(userPrefsHelper.isAudioBookmarked(audio.id))
                             }
                             val accessible = isContentAccessible(audio.isFreeLaunchContent, audio.isPremium, hasPremiumAccess)
+                            // Create DownloadViewModel for each AudioItemCard in search results
+                            val downloadViewModel: DownloadViewModel = viewModel(
+                                key = "search_${audio.id}", // Unique key for search results
+                                factory = object : ViewModelProvider.Factory {
+                                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                                        if (modelClass.isAssignableFrom(DownloadViewModel::class.java)) {
+                                            @Suppress("UNCHECKED_CAST")
+                                            return DownloadViewModel(application) as T
+                                        }
+                                        throw IllegalArgumentException("Unknown ViewModel class in SearchScreen for DownloadViewModel")
+                                    }
+                                }
+                            )
                             AudioItemCard(
                                 audio = audio,
                                 playerManager = playerManager,
                                 isBookmarked = isBookmarked,
                                 onBookmarkToggle = { isBookmarked = userPrefsHelper.toggleAudioBookmark(audio.id) },
                                 isLocked = !accessible,
-                                onLockedItemClick = { subscriptionViewModel.launchPurchaseFlow(context as Activity, subscriptionViewModel.premiumProductDetails.value) }
+                                onLockedItemClick = { subscriptionViewModel.launchPurchaseFlow(context as Activity, subscriptionViewModel.premiumProductDetails.value) },
+                                downloadViewModel = downloadViewModel // Pass the DownloadViewModel
                             )
                         }
                     }

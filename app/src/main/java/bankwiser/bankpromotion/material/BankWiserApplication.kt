@@ -1,7 +1,9 @@
 package bankwiser.bankpromotion.material
 
 import android.app.Application
-import bankwiser.bankpromotion.material.data.AssetPackUpdateManager // New
+import bankwiser.bankpromotion.material.crypto.FileEncryptionHelper
+import bankwiser.bankpromotion.material.crypto.KeyStoreHelper
+import bankwiser.bankpromotion.material.data.AssetPackUpdateManager
 import bankwiser.bankpromotion.material.data.local.DatabaseHelper
 import bankwiser.bankpromotion.material.data.local.UserPreferencesHelper
 import bankwiser.bankpromotion.material.data.repository.ContentRepository
@@ -18,18 +20,18 @@ class BankWiserApplication : Application() {
     val databaseHelper: DatabaseHelper by lazy { DatabaseHelper(this) }
     val userPreferencesHelper: UserPreferencesHelper by lazy { UserPreferencesHelper(this) }
     val contentRepository: ContentRepository by lazy { ContentRepository(databaseHelper) }
-    val assetPackUpdateManager: AssetPackUpdateManager by lazy { // New
+    val assetPackUpdateManager: AssetPackUpdateManager by lazy {
         AssetPackUpdateManager(this, databaseHelper, userPreferencesHelper, applicationScope)
     }
+    // Crypto Helpers
+    val keyStoreHelper: KeyStoreHelper by lazy { KeyStoreHelper() }
+    val fileEncryptionHelper: FileEncryptionHelper by lazy { FileEncryptionHelper(keyStoreHelper) }
+
 
     override fun onCreate() {
         super.onCreate()
-        // No longer doing contentRepository.checkAndPrepopulate() here,
-        // as DatabaseHelper's init now handles initial DB copy if needed.
-
-        // Start checking for updates periodically (e.g., after a delay on app start)
         applicationScope.launch {
-            delay(10000) // Wait 10 seconds after app start
+            delay(10000) 
             assetPackUpdateManager.initializeAndCheckRemoteConfig()
         }
     }

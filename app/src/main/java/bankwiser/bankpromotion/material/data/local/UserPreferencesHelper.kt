@@ -2,17 +2,15 @@ package bankwiser.bankpromotion.material.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.compositionLocalOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-// Define constants for theme preference
 const val THEME_PREFERENCE_KEY = "theme_preference"
 const val THEME_LIGHT = "light"
 const val THEME_DARK = "dark"
-const val THEME_SYSTEM = "system" // Default
+const val THEME_SYSTEM = "system"
 
 class UserPreferencesHelper(context: Context) {
 
@@ -24,6 +22,7 @@ class UserPreferencesHelper(context: Context) {
         private const val BOOKMARKED_FAQS_PREFIX = "bookmarked_faq_"
         private const val BOOKMARKED_MCQS_PREFIX = "bookmarked_mcq_"
         private const val BOOKMARKED_AUDIO_PREFIX = "bookmarked_audio_"
+        private const val DOWNLOADED_AUDIO_PREFIX = "downloaded_audio_path_" // New
 
         private const val IS_SUBSCRIBED_KEY = "is_user_subscribed"
         private const val CURRENT_DB_VERSION_KEY = "current_db_version"
@@ -40,9 +39,8 @@ class UserPreferencesHelper(context: Context) {
 
     fun setThemePreference(themeValue: String) {
         prefs.edit().putString(THEME_PREFERENCE_KEY, themeValue).apply()
-        _themePreferenceFlow.value = themeValue // Update the flow
+        _themePreferenceFlow.value = themeValue
     }
-
 
     // --- Database Version ---
     fun getCurrentDatabaseVersion(): Int {
@@ -62,7 +60,20 @@ class UserPreferencesHelper(context: Context) {
 
     fun setUserSubscribed(isSubscribed: Boolean) {
         prefs.edit().putBoolean(IS_SUBSCRIBED_KEY, isSubscribed).apply()
-        _isUserSubscribedFlow.value = isSubscribed // Update the flow
+        _isUserSubscribedFlow.value = isSubscribed
+    }
+
+    // --- Downloaded Audio Tracking ---
+    fun getDownloadedAudioPath(audioId: String): String? {
+        return prefs.getString(DOWNLOADED_AUDIO_PREFIX + audioId, null)
+    }
+
+    fun setDownloadedAudioPath(audioId: String, filePath: String) {
+        prefs.edit().putString(DOWNLOADED_AUDIO_PREFIX + audioId, filePath).apply()
+    }
+
+    fun removeDownloadedAudioPath(audioId: String) {
+        prefs.edit().remove(DOWNLOADED_AUDIO_PREFIX + audioId).apply()
     }
 
     // --- Bookmark Functions ---
@@ -96,6 +107,4 @@ class UserPreferencesHelper(context: Context) {
     }
 }
 
-// CompositionLocal for UserPreferencesHelper for easier access in Composables if needed
-// Not strictly necessary if only ViewModels access it, but can be handy.
 val LocalUserPreferencesHelper: ProvidableCompositionLocal<UserPreferencesHelper?> = compositionLocalOf { null }
