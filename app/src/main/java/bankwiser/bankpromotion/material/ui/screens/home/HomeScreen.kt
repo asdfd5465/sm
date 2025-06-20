@@ -78,7 +78,9 @@ fun HomeScreen(
             AssetUpdateUI(
                 updateState = updateState,
                 onDownloadConfirm = { assetPackUpdateManager.startUpdateProcess() },
-                onDismiss = { /* TODO: Handle dismiss action if needed */ }
+                onDismiss = { /* TODO: Handle dismiss action if needed */ 
+                    assetPackUpdateManager.userDismissedPrompt()
+                }
             )
 
             Button(
