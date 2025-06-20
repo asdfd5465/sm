@@ -520,7 +520,7 @@ fun McqItem(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class) // Keep if you use Experimental APIs like TooltipBox
 @Composable
 fun AudioItemCard(
     audio: AudioContent,
@@ -536,12 +536,11 @@ fun AudioItemCard(
 
     val currentPlayerData by playerManager.playerState.collectAsState()
     val downloadedPath = userPrefsHelper.getDownloadedAudioPath(audio.id)
-    // This is the identifier that PlayerManager uses for its currentPlayingUrlOrPath
-    val contentIdentifierBeingPlayedOrCued = currentPlayerData.currentPlayingUrlOrPath 
-    // This is the identifier for THIS audio item (local path if downloaded, else URL)
-    val thisAudioItemIdentifier = downloadedPath ?: audio.audioUrl
+    val contentIdentifierToPlay = downloadedPath ?: audio.audioUrl // This is the ID used for playback attempt
 
-    val isThisAudioCurrentlyCuedOrPlaying = contentIdentifierBeingPlayedOrCued == thisAudioItemIdentifier
+    // This checks if the PlayerManager's current item matches this card's item
+    val isThisAudioCurrentlyCuedOrPlaying = currentPlayerData.currentPlayingUrlOrPath == contentIdentifierToPlay
+    // This checks if it's cued/playing AND actually in playing state
     val isActuallyPlayingThisAudio = isThisAudioCurrentlyCuedOrPlaying && currentPlayerData.isActuallyPlaying
 
 
@@ -618,7 +617,7 @@ fun AudioItemCard(
                                     }
                                 }
                                 is DownloadUiState.Error -> {
-                                    TooltipBox(
+                                    TooltipBox( 
                                         tooltip = { PlainTooltip { Text(specificDownloadState.message) } },
                                         state = rememberTooltipState(),
                                         positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider()
@@ -628,7 +627,7 @@ fun AudioItemCard(
                                         }
                                     }
                                 }
-                                is DownloadUiState.Idle -> {
+                                is DownloadUiState.Idle -> { 
                                     if (isDownloaded) {
                                         IconButton(onClick = {
                                             val localPathForPlayback = userPrefsHelper.getDownloadedAudioPath(audio.id)
@@ -636,7 +635,7 @@ fun AudioItemCard(
                                                 if (isActuallyPlayingThisAudio) playerManager.pause()
                                                 else playerManager.play(localPathForPlayback, isLocalEncrypted = true)
                                             } else {
-                                                isDownloaded = false
+                                                isDownloaded = false 
                                                 downloadViewModel.downloadAndEncryptAudio(audio.id, audio.audioUrl)
                                             }
                                         }) {
@@ -645,7 +644,7 @@ fun AudioItemCard(
                                                 contentDescription = "Play/Pause", modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary
                                             )
                                         }
-                                    } else {
+                                    } else { 
                                         IconButton(onClick = { downloadViewModel.downloadAndEncryptAudio(audio.id, audio.audioUrl) }) {
                                             Icon(Icons.Filled.DownloadForOffline, "Download Audio", modifier = Modifier.size(32.dp))
                                         }
@@ -653,7 +652,7 @@ fun AudioItemCard(
                                 }
                             }
 
-                        } else {
+                        } else { 
                             Icon(
                                 imageVector = Icons.Filled.Lock,
                                 contentDescription = "Locked",
@@ -663,7 +662,7 @@ fun AudioItemCard(
                         }
                     }
                 }
-                // CORRECTED: Use isThisAudioCurrentlyCuedOrPlaying for showing error related to this item
+                // CORRECTED LINE: Use isThisAudioCurrentlyCuedOrPlaying
                 if (!isLocked && isThisAudioCurrentlyCuedOrPlaying && currentPlayerData.error != null) {
                     Text(
                         text = "Playback Error: ${currentPlayerData.error}",
