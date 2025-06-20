@@ -24,15 +24,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel // Import ViewModel
-import androidx.lifecycle.ViewModelProvider // Import ViewModelProvider
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import bankwiser.bankpromotion.material.BankWiserApplication
+import bankwiser.bankpromotion.material.data.local.UserPreferencesHelper // Make sure this is imported
 import bankwiser.bankpromotion.material.data.model.*
 import bankwiser.bankpromotion.material.player.PlayerManager
 import bankwiser.bankpromotion.material.ui.theme.TextSecondary
-import bankwiser.bankpromotion.material.ui.viewmodel.DownloadUiState // Import DownloadUiState
-import bankwiser.bankpromotion.material.ui.viewmodel.DownloadViewModel // Import DownloadViewModel
+import bankwiser.bankpromotion.material.ui.viewmodel.DownloadUiState
+import bankwiser.bankpromotion.material.ui.viewmodel.DownloadViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.SavedStateViewModelFactory
 import bankwiser.bankpromotion.material.ui.viewmodel.SubscriptionViewModel
 import bankwiser.bankpromotion.material.ui.viewmodel.TopicContentViewModel
@@ -243,9 +244,10 @@ fun McqsList(mcqs: List<Mcq>, hasPremiumAccess: Boolean, subscriptionViewModel: 
 @Composable
 fun AudioList(audioItems: List<AudioContent>, playerManager: PlayerManager, hasPremiumAccess: Boolean, subscriptionViewModel: SubscriptionViewModel) {
     val context = LocalContext.current
-    val application = context.applicationContext as BankWiserApplication // Get application for factory
-    val userPrefsHelper = application.userPreferencesHelper
+    val application = context.applicationContext as BankWiserApplication
+    val userPrefsHelper = application.userPreferencesHelper // Get userPrefsHelper here
     if (audioItems.isEmpty()) { EmptyContentMessage("No audio content available for this topic yet."); return }
+
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         items(audioItems) { audio ->
             var isBookmarked by remember(audio.id, userPrefsHelper.isAudioBookmarked(audio.id)) {
@@ -254,16 +256,15 @@ fun AudioList(audioItems: List<AudioContent>, playerManager: PlayerManager, hasP
             val accessible = isContentAccessible(audio.isFreeLaunchContent, audio.isPremium, hasPremiumAccess)
             val productDetails by subscriptionViewModel.premiumProductDetails.collectAsState()
 
-            // Correctly instantiate DownloadViewModel for each AudioItemCard
             val downloadViewModel: DownloadViewModel = viewModel(
-                key = "audio_${audio.id}", // Unique key per audio item
+                key = "audio_topic_${audio.id}", // Unique key per audio item within this screen
                 factory = object : ViewModelProvider.Factory {
                     override fun <T : ViewModel> create(modelClass: Class<T>): T {
                         if (modelClass.isAssignableFrom(DownloadViewModel::class.java)) {
                             @Suppress("UNCHECKED_CAST")
-                            return DownloadViewModel(application) as T // Pass application
+                            return DownloadViewModel(application) as T
                         }
-                        throw IllegalArgumentException("Unknown ViewModel class for DownloadViewModel factory")
+                        throw IllegalArgumentException("Unknown ViewModel class for DownloadViewModel factory in TopicContentScreen")
                     }
                 }
             )
@@ -275,7 +276,7 @@ fun AudioList(audioItems: List<AudioContent>, playerManager: PlayerManager, hasP
                 onBookmarkToggle = { isBookmarked = userPrefsHelper.toggleAudioBookmark(audio.id) },
                 isLocked = !accessible,
                 onLockedItemClick = { subscriptionViewModel.launchPurchaseFlow(context as Activity, productDetails) },
-                downloadViewModel = downloadViewModel // Pass the correctly instantiated ViewModel
+                downloadViewModel = downloadViewModel
             )
         }
     }
@@ -519,7 +520,7 @@ fun McqItem(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class) // Added for TooltipBox
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AudioItemCard(
     audio: AudioContent,
@@ -528,26 +529,25 @@ fun AudioItemCard(
     onBookmarkToggle: () -> Unit,
     isLocked: Boolean,
     onLockedItemClick: () -> Unit,
-    downloadViewModel: DownloadViewModel // This was correctly added here
+    downloadViewModel: DownloadViewModel
 ) {
+    val context = LocalContext.current // Get context for UserPreferencesHelper
+    val userPrefsHelper = (context.applicationContext as BankWiserApplication).userPreferencesHelper
+
     val currentPlayerData by playerManager.playerState.collectAsState()
-    // Corrected logic for isPlayingThisAudio
-    val downloadedPath = (LocalContext.current.applicationContext as BankWiserApplication)
-        .userPreferencesHelper.getDownloadedAudioPath(audio.id)
+    val downloadedPath = userPrefsHelper.getDownloadedAudioPath(audio.id)
     val contentIdentifierToPlay = downloadedPath ?: audio.audioUrl
     val isPlayingThisAudio = playerManager.isCurrentlyPlaying(contentIdentifierToPlay)
 
-
     val showPadlockIcon = audio.isPremium && !audio.isFreeLaunchContent
 
-    val downloadStates by downloadViewModel.downloadStates.collectAsState() // Correctly observe
+    val downloadStates by downloadViewModel.downloadStates.collectAsState()
     val specificDownloadState = downloadStates[audio.id] ?: DownloadUiState.Idle
-    var isDownloaded by remember(audio.id, userPrefsHelper.getDownloadedAudioPath(audio.id)) { // Observe actual downloaded path
-        mutableStateOf(userPrefsHelper.getDownloadedAudioPath(audio.id) != null)
+    var isDownloaded by remember(audio.id, downloadedPath) { // Key remember with downloadedPath
+        mutableStateOf(downloadedPath != null)
     }
 
-
-    Box { // Wrap Card in a Box
+    Box {
         Card(
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -597,7 +597,7 @@ fun AudioItemCard(
                                     CircularProgressIndicator(modifier = Modifier.size(32.dp), strokeWidth = 2.dp)
                                 }
                                 is DownloadUiState.Success -> {
-                                   LaunchedEffect(audio.id) { isDownloaded = true } // Update local downloaded state
+                                   LaunchedEffect(audio.id) { isDownloaded = true }
                                     IconButton(onClick = {
                                         val localPath = userPrefsHelper.getDownloadedAudioPath(audio.id)
                                         if (localPath != null) {
@@ -612,18 +612,17 @@ fun AudioItemCard(
                                     }
                                 }
                                 is DownloadUiState.Error -> {
-                                    TooltipBox( // Use TooltipBox
+                                    TooltipBox(
                                         tooltip = { PlainTooltip { Text(specificDownloadState.message) } },
                                         state = rememberTooltipState(),
-                                        modifier = Modifier, // Modifier for TooltipBox itself if needed
-                                        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider() // Add positionProvider
+                                        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider()
                                     ) {
                                         IconButton(onClick = { downloadViewModel.downloadAndEncryptAudio(audio.id, audio.audioUrl) }) {
                                             Icon(Icons.Filled.ErrorOutline, "Download Error, Tap to retry", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(32.dp))
                                         }
                                     }
                                 }
-                                else -> { // Idle
+                                is DownloadUiState.Idle -> { // Check isDownloaded state here
                                     if (isDownloaded) {
                                         IconButton(onClick = {
                                             val localPath = userPrefsHelper.getDownloadedAudioPath(audio.id)
@@ -631,7 +630,7 @@ fun AudioItemCard(
                                                 if (isPlayingThisAudio) playerManager.pause()
                                                 else playerManager.play(localPath, isLocalEncrypted = true)
                                             } else {
-                                                isDownloaded = false
+                                                isDownloaded = false // Should ideally not happen if isDownloaded is true
                                                 downloadViewModel.downloadAndEncryptAudio(audio.id, audio.audioUrl)
                                             }
                                         }) {
@@ -640,7 +639,7 @@ fun AudioItemCard(
                                                 contentDescription = "Play/Pause", modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary
                                             )
                                         }
-                                    } else {
+                                    } else { // Not downloaded, show download button
                                         IconButton(onClick = { downloadViewModel.downloadAndEncryptAudio(audio.id, audio.audioUrl) }) {
                                             Icon(Icons.Filled.DownloadForOffline, "Download Audio", modifier = Modifier.size(32.dp))
                                         }
@@ -648,19 +647,20 @@ fun AudioItemCard(
                                 }
                             }
 
-                        } else { // Content is Locked
+                        } else {
                             Icon(
                                 imageVector = Icons.Filled.Lock,
                                 contentDescription = "Locked",
-                                modifier = Modifier.size(24.dp).padding(end = 4.dp).clickable(onClick = onLockedItemClick), // Make lock icon clickable if item is locked
+                                modifier = Modifier.size(24.dp).padding(end = 4.dp).clickable(onClick = onLockedItemClick),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
                         }
                     }
                 }
-                if (!isLocked && isThisAudioActive && currentPlayerData.error != null) {
+                // Show error message related to playback for this specific audio item
+                if (!isLocked && isThisAudioActive && currentPlayerData.error != null && currentPlayerData.currentPlayingUrlOrPath == contentIdentifierToPlay) {
                     Text(
-                        text = "Error: ${currentPlayerData.error}",
+                        text = "Playback Error: ${currentPlayerData.error}",
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 4.dp)
