@@ -236,10 +236,20 @@ fun McqsList(mcqs: List<Mcq>, hasPremiumAccess: Boolean, subscriptionViewModel: 
 }
 
 @Composable
-fun AudioList(audioItems: List<AudioContent>, playerManager: PlayerManager, hasPremiumAccess: Boolean, subscriptionViewModel: SubscriptionViewModel) {
+fun AudioList(
+    audioItems: List<AudioContent>,
+    playerManager: PlayerManager,
+    hasPremiumAccess: Boolean,
+    subscriptionViewModel: SubscriptionViewModel
+) {
     val context = LocalContext.current
-    val userPrefsHelper = (context.applicationContext as BankWiserApplication).userPreferencesHelper
+    val application = context.applicationContext as BankWiserApplication
+    val userPrefsHelper = application.userPreferencesHelper
+    // Each AudioItemCard will get its own DownloadViewModel instance
+    // This is acceptable for this screen, but for a global download manager, a single instance would be better.
+
     if (audioItems.isEmpty()) { EmptyContentMessage("No audio content available for this topic yet."); return }
+
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         items(audioItems) { audio ->
             var isBookmarked by remember(audio.id, userPrefsHelper.isAudioBookmarked(audio.id)) {
@@ -247,13 +257,29 @@ fun AudioList(audioItems: List<AudioContent>, playerManager: PlayerManager, hasP
             }
             val accessible = isContentAccessible(audio.isFreeLaunchContent, audio.isPremium, hasPremiumAccess)
             val productDetails by subscriptionViewModel.premiumProductDetails.collectAsState()
+
+            // Create DownloadViewModel scoped to this item, or pass a shared one if preferred
+            val downloadViewModel: DownloadViewModel = viewModel(
+                key = audio.id, // Key to get a unique VM instance per audio item
+                factory = object : ViewModelProvider.Factory {
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                        if (modelClass.isAssignableFrom(DownloadViewModel::class.java)) {
+                            @Suppress("UNCHECKED_CAST")
+                            return DownloadViewModel(application) as T
+                        }
+                        throw IllegalArgumentException("Unknown ViewModel class")
+                    }
+                }
+            )
+
             AudioItemCard(
                 audio = audio,
                 playerManager = playerManager,
                 isBookmarked = isBookmarked,
                 onBookmarkToggle = { isBookmarked = userPrefsHelper.toggleAudioBookmark(audio.id) },
                 isLocked = !accessible,
-                onLockedItemClick = { subscriptionViewModel.launchPurchaseFlow(context as Activity, productDetails) }
+                onLockedItemClick = { subscriptionViewModel.launchPurchaseFlow(context as Activity, productDetails) },
+                downloadViewModel = downloadViewModel // Pass the ViewModel
             )
         }
     }
