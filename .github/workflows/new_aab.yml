@@ -1,4 +1,4 @@
-name: AAB
+name: new AAB
 
 on:
   workflow_dispatch: # Allows manual triggering
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build_and_sign_release_aab:
-    name: AAB 
+    name: new AAB 
     runs-on: ubuntu-latest
     # Optional: Condition to run only on manual dispatch or tags
     # if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
