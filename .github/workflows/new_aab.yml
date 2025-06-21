@@ -31,11 +31,15 @@ jobs:
         run: |
           echo "ANDROID_SDK_ROOT=${HOME}/android-sdk" >> $GITHUB_ENV
           echo "ANDROID_HOME=${HOME}/android-sdk" >> $GITHUB_ENV # Legacy
+          echo "ANDROID_NDK_HOME=${HOME}/android-sdk/ndk-bundle" >> $GITHUB_ENV # Common path, adjust if sdkmanager installs elsewhere
           SDK_CMD_TOOLS_PATH="${HOME}/android-sdk/cmdline-tools/latest/bin"
           SDK_PLATFORM_TOOLS_PATH="${HOME}/android-sdk/platform-tools"
+          SDK_NDK_PATH="${HOME}/android-sdk/ndk-bundle" # Path for NDK
           SDK_EMULATOR_PATH="${HOME}/android-sdk/emulator" # Included for completeness
           echo "$SDK_CMD_TOOLS_PATH" >> $GITHUB_PATH
           echo "$SDK_PLATFORM_TOOLS_PATH" >> $GITHUB_PATH
+          echo "$SDK_NDK_PATH" >> $GITHUB_PATH # Add NDK to PATH
+          export PATH="$SDK_CMD_TOOLS_PATH:$SDK_PLATFORM_TOOLS_PATH:$SDK_NDK_PATH:$PATH"
           echo "$SDK_EMULATOR_PATH" >> $GITHUB_PATH
           export PATH="$SDK_CMD_TOOLS_PATH:$SDK_PLATFORM_TOOLS_PATH:$SDK_EMULATOR_PATH:$PATH"
           mkdir -p ${HOME}/android-sdk/cmdline-tools
@@ -55,6 +59,13 @@ jobs:
           yes | sdkmanager --licenses --sdk_root="${ANDROID_HOME}" > /dev/null || echo "Failed to accept licenses with --sdk_root"
           echo "Installing SDK packages..."
           sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools" > /dev/null || echo "Failed to install SDK packages"
+          echo "Installing SDK packages including NDK..."
+          # Ensure you list a specific NDK version if your project requires it, or use a general "ndk-bundle"
+          # Check available NDK versions with `sdkmanager --list | grep ndk`
+          # For example: "ndk;25.2.9519653" or just "ndk-bundle" for the latest side-by-side version
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools" "ndk-bundle" > /dev/null || echo "Failed to install SDK packages"
+          # If "ndk-bundle" fails, try a specific version like "ndk;25.2.9519653"
+          # You might need to find the exact package name for NDK via `sdkmanager --list`          
           echo "SDK Setup Complete. Installed packages:"
           sdkmanager --list_installed || echo "sdkmanager --list_installed failed"
         env:
@@ -137,6 +148,7 @@ jobs:
           # The SIGNING_... variables are also set in GITHUB_ENV from the previous step
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }} # Pass NDK home to Gradle
 
       - name: Upload Release AAB artifact
         uses: actions/upload-artifact@v4
