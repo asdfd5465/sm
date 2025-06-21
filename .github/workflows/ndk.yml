@@ -1,0 +1,141 @@
+name: Android Release Build and Sign
+
+on:
+  workflow_dispatch:
+  # push:
+    # branches: [ main ]
+    # tags:
+      # - 'v*.*.*'
+
+jobs:
+  build_and_sign_release:
+    name: Build Signed Release APK
+    runs-on: ubuntu-latest
+    # if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Android SDK and NDK
+        run: |
+          echo "ANDROID_SDK_ROOT=${HOME}/android-sdk" >> $GITHUB_ENV
+          echo "ANDROID_HOME=${HOME}/android-sdk" >> $GITHUB_ENV
+          # For NDK
+          echo "ANDROID_NDK_HOME=${HOME}/android-sdk/ndk-bundle" >> $GITHUB_ENV # Common path, adjust if sdkmanager installs elsewhere
+          
+          SDK_CMD_TOOLS_PATH="${HOME}/android-sdk/cmdline-tools/latest/bin"
+          SDK_PLATFORM_TOOLS_PATH="${HOME}/android-sdk/platform-tools"
+          SDK_NDK_PATH="${HOME}/android-sdk/ndk-bundle" # Path for NDK
+
+          echo "$SDK_CMD_TOOLS_PATH" >> $GITHUB_PATH
+          echo "$SDK_PLATFORM_TOOLS_PATH" >> $GITHUB_PATH
+          echo "$SDK_NDK_PATH" >> $GITHUB_PATH # Add NDK to PATH
+
+          export PATH="$SDK_CMD_TOOLS_PATH:$SDK_PLATFORM_TOOLS_PATH:$SDK_NDK_PATH:$PATH"
+
+          mkdir -p ${HOME}/android-sdk/cmdline-tools
+          
+          CMDTOOLS_VERSION_ZIP="commandlinetools-linux-11076708_latest.zip" 
+          wget --quiet "https://dl.google.com/android/repository/${CMDTOOLS_VERSION_ZIP}" -O cmdline-tools.zip
+          unzip -q cmdline-tools.zip -d ${HOME}/android-sdk/cmdline-tools
+          mv ${HOME}/android-sdk/cmdline-tools/cmdline-tools ${HOME}/android-sdk/cmdline-tools/latest
+          rm cmdline-tools.zip
+          
+          yes | sdkmanager --licenses > /dev/null || true
+          
+          echo "Installing SDK packages including NDK..."
+          # Ensure you list a specific NDK version if your project requires it, or use a general "ndk-bundle"
+          # Check available NDK versions with `sdkmanager --list | grep ndk`
+          # For example: "ndk;25.2.9519653" or just "ndk-bundle" for the latest side-by-side version
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools" "ndk-bundle" > /dev/null || echo "Failed to install SDK packages"
+          # If "ndk-bundle" fails, try a specific version like "ndk;25.2.9519653"
+          # You might need to find the exact package name for NDK via `sdkmanager --list`
+          
+          echo "SDK Setup Complete. Installed packages:"
+          sdkmanager --list_installed || echo "sdkmanager --list_installed failed"
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT || format('{0}/android-sdk', env.HOME) }}
+
+      # ... (rest of your workflow: Check secrets, Decode Keystore, Cache, Executable, Build, Upload) ...
+      # The "Build Signed Release APK" step should now correctly build the native code as well.
+      - name: Check for Keystore Secret
+        id: check_keystore_secret
+        run: |
+          if [ -n "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" ]; then
+            echo "SIGNING_KEYSTORE_BASE64_SECRET_SET=true" >> $GITHUB_ENV
+          else
+            echo "SIGNING_KEYSTORE_BASE64_SECRET_SET=false" >> $GITHUB_ENV
+          fi
+          if [ -n "${{ secrets.SIGNING_KEYSTORE_PASSWORD }}" ]; then echo "KEYSTORE_PASS_SET=true" >> $GITHUB_ENV; else echo "KEYSTORE_PASS_SET=false" >> $GITHUB_ENV; fi
+          if [ -n "${{ secrets.SIGNING_KEY_ALIAS }}" ]; then echo "KEY_ALIAS_SET=true" >> $GITHUB_ENV; else echo "KEY_ALIAS_SET=false" >> $GITHUB_ENV; fi
+          if [ -n "${{ secrets.SIGNING_KEY_PASSWORD }}" ]; then echo "KEY_PASS_SET=true" >> $GITHUB_ENV; else echo "KEY_PASS_SET=false" >> $GITHUB_ENV; fi
+
+      - name: Check for Google Services JSON Secret # Added for completeness
+        id: check_gservices_secret
+        run: |
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" ]; then
+            echo "GSERVICES_JSON_SECRET_SET=true" >> $GITHUB_ENV
+          else
+            echo "GSERVICES_JSON_SECRET_SET=false" >> $GITHUB_ENV
+          fi
+      
+      - name: Decode google-services.json
+        if: env.GSERVICES_JSON_SECRET_SET == 'true'
+        run: |
+          echo "Decoding google-services.json..."
+          mkdir -p ${{ github.workspace }}/app
+          echo "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" | base64 --decode > ${{ github.workspace }}/app/google-services.json
+          if [ -f "${{ github.workspace }}/app/google-services.json" ]; then echo "google-services.json created successfully."; else echo "ERROR: google-services.json NOT created."; exit 1; fi
+
+      - name: Decode Keystore and Set Up Signing Variables
+        if: env.SIGNING_KEYSTORE_BASE64_SECRET_SET == 'true' && env.KEYSTORE_PASS_SET == 'true' && env.KEY_ALIAS_SET == 'true' && env.KEY_PASS_SET == 'true'
+        run: |
+          echo "Decoding keystore..."
+          KEYSTORE_FILE_PATH_IN_RUNNER="${HOME}/signing_keystore.jks" 
+          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > $KEYSTORE_FILE_PATH_IN_RUNNER
+          
+          echo "Setting up signing environment variables for Gradle..."
+          echo "SIGNING_KEYSTORE_FILE_PATH=$KEYSTORE_FILE_PATH_IN_RUNNER" >> $GITHUB_ENV
+          echo "SIGNING_KEYSTORE_PASSWORD_ENV=${{ secrets.SIGNING_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+          echo "SIGNING_KEY_ALIAS_ENV=${{ secrets.SIGNING_KEY_ALIAS }}" >> $GITHUB_ENV
+          echo "SIGNING_KEY_PASSWORD_ENV=${{ secrets.SIGNING_KEY_PASSWORD }}" >> $GITHUB_ENV
+          
+          if [ -f "$KEYSTORE_FILE_PATH_IN_RUNNER" ]; then echo "Keystore file created at $KEYSTORE_FILE_PATH_IN_RUNNER"; else echo "ERROR: Keystore file NOT created at $KEYSTORE_FILE_PATH_IN_RUNNER"; exit 1; fi
+
+      - name: Setup Gradle Caching
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build Signed Release APK
+        run: |
+          echo "Starting Release Build..."
+          ./gradlew clean assembleRelease
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }} # Pass NDK home to Gradle
+
+      - name: Upload Release APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
